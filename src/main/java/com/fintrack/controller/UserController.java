@@ -7,8 +7,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+import com.fintrack.dto.LoginRequest;
 import com.fintrack.dto.RegisterRequest;
 import com.fintrack.service.UserService;
+
 
 @RestController
 @RequestMapping("/api/auth")
@@ -22,10 +25,17 @@ public class UserController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public String register(@RequestBody RegisterRequest request) {
+    public String register(@Valid @RequestBody RegisterRequest request) {
 
         userService.register(request);
 
         return "User registered successfully";
     }
+
+    @PostMapping("/login")
+    @ResponseStatus(HttpStatus.OK)
+    public String login(@Valid @RequestBody LoginRequest request) {
+    userService.login(request);
+    return "Login successful";
+}
 }
