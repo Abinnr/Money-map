@@ -35,7 +35,8 @@ public class UserController {
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
     public String login(@Valid @RequestBody LoginRequest request) {
-    userService.login(request);
-    return "Login successful";
-}
+    return userService.login(request);
+    }
+
+    
 }

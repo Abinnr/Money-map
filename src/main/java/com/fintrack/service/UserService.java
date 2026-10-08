@@ -9,6 +9,7 @@ import com.fintrack.entity.User;
 import com.fintrack.exception.EmailAlreadyExistsException;
 import com.fintrack.exception.InvalidCredentialsException;
 import com.fintrack.repository.UserRepository;
+import com.fintrack.security.JwtService;
 
 
 @Service
@@ -16,14 +17,18 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+
 
     public UserService(
-            UserRepository userRepository,
-            PasswordEncoder passwordEncoder) {
+        UserRepository userRepository,
+        PasswordEncoder passwordEncoder,
+        JwtService jwtService) {
 
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+    this.userRepository = userRepository;
+    this.passwordEncoder = passwordEncoder;
+    this.jwtService = jwtService;
+}
 
     public void register(RegisterRequest request) {
 
@@ -44,7 +49,7 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void login(LoginRequest request) {
+    public String login(LoginRequest request) {
 
     User user = userRepository.findByEmail(request.getEmail())
             .orElseThrow(() ->
@@ -61,5 +66,6 @@ public class UserService {
                 "Invalid email or password"
         );
     }
-    }   
+    return jwtService.generateToken(user.getId());
+    }
 }
