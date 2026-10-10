@@ -28,4 +28,36 @@ public class CreateTransactionRequest {
     }
 
     // getters and setters
+
+    public BigDecimal getAmount() {
+    return amount;
+}
+
+public void setAmount(BigDecimal amount) {
+    this.amount = amount;
+}
+
+public TransactionType getType() {
+    return type;
+}
+
+public void setType(TransactionType type) {
+    this.type = type;
+}
+
+public String getDescription() {
+    return description;
+}
+
+public void setDescription(String description) {
+    this.description = description;
+}
+
+public LocalDateTime getTransactionDate() {
+    return transactionDate;
+}
+
+public void setTransactionDate(LocalDateTime transactionDate) {
+    this.transactionDate = transactionDate;
+}
 }
