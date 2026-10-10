@@ -16,18 +16,18 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+        private final JwtService jwtService;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
-        this.jwtService = jwtService;
-    }
+        public JwtAuthenticationFilter(JwtService jwtService) {
+                this.jwtService = jwtService;
+        }
 
-    @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
+        @Override
+        protected void doFilterInternal(
+                HttpServletRequest request,
+                HttpServletResponse response,
+                FilterChain filterChain)
+                throws ServletException, IOException {
 
         String authorizationHeader =
                 request.getHeader("Authorization");
@@ -35,8 +35,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authorizationHeader == null ||
                 !authorizationHeader.startsWith("Bearer ")) {
 
-            filterChain.doFilter(request, response);
-            return;
+                filterChain.doFilter(request, response);
+                return;
         }
 
         String token =
@@ -44,26 +44,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
 
-            Long userId =
-                    jwtService.extractUserId(token);
+                Long userId =
+                        jwtService.extractUserId(token);
 
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            userId,
-                            null,
-                            null
-                    );
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                null
+                        );
 
-            SecurityContextHolder
-                    .getContext()
-                    .setAuthentication(authentication);
+                SecurityContextHolder
+                        .getContext()
+                        .setAuthentication(authentication);
 
-        } catch (Exception exception) {
+                } catch (Exception exception) {
 
-            // Invalid JWT
-            // Continue without authentication
+                // Invalid JWT
+                // Continue without authentication
+                }
+
+                filterChain.doFilter(request, response);
         }
-
-        filterChain.doFilter(request, response);
-    }
 }
