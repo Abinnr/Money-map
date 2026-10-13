@@ -1,5 +1,6 @@
 package com.fintrack.controller;
 
+import com.fintrack.dto.CategoryResponse;
 import com.fintrack.dto.CreateCategoryRequest;
 import com.fintrack.entity.Category;
 import com.fintrack.service.CategoryService;
@@ -25,20 +26,20 @@ public class CategoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Category createCategory(
+    public CategoryResponse createCategory(
             @Valid @RequestBody CreateCategoryRequest request) {
 
         return categoryService.createCategory(request);
     }
 
     @GetMapping
-    public List<Category> getAvailableCategories() {
+    public List<CategoryResponse> getAvailableCategories() {
 
         return categoryService.getAvailableCategories();
     }
 
     @GetMapping("/{id}")
-    public Category getMyCategory(
+    public CategoryResponse getMyCategory(
             @PathVariable Long id) {
 
         return categoryService.getMyCategory(id);
