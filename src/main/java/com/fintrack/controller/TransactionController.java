@@ -1,6 +1,7 @@
 package com.fintrack.controller;
 
 import com.fintrack.dto.CreateTransactionRequest;
+import com.fintrack.dto.TransactionResponse;
 import com.fintrack.entity.Transaction;
 import com.fintrack.service.TransactionService;
 
@@ -25,20 +26,20 @@ public class TransactionController {
 
     @PostMapping  // to create a transaction.
     @ResponseStatus(HttpStatus.CREATED)
-    public Transaction createTransaction(
+    public TransactionResponse createTransaction(
             @Valid @RequestBody CreateTransactionRequest request) {
 
         return transactionService.createTransaction(request);
     }
 
     @GetMapping  // to retrieve all transaction list.
-    public List<Transaction> getMyTransactions() {
+    public List<TransactionResponse> getMyTransactions() {
 
         return transactionService.getMyTransactions();
     }
 
     @GetMapping("/{id}")  // to retreive a particular selected trancation 
-    public Transaction getMyTransaction(
+    public TransactionResponse getMyTransaction(
             @PathVariable Long id) {
 
         return transactionService.getMyTransaction(id);

@@ -1,6 +1,7 @@
 package com.fintrack.service;
 
 import com.fintrack.dto.CreateTransactionRequest;
+import com.fintrack.dto.TransactionResponse;
 import com.fintrack.entity.Transaction;
 import com.fintrack.entity.User;
 import com.fintrack.repository.TransactionRepository;
@@ -15,19 +16,33 @@ import java.util.List;
 @Service
 public class TransactionService {
 
-    private final TransactionRepository transactionRepository;
-    private final UserRepository userRepository;
+        private final TransactionRepository transactionRepository;
+        private final UserRepository userRepository;
 
-    public TransactionService(
-            TransactionRepository transactionRepository,
-            UserRepository userRepository) {
+        public TransactionService(
+                TransactionRepository transactionRepository,
+                UserRepository userRepository) {
 
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
-    }
+        }
 
-    public Transaction createTransaction(
-            CreateTransactionRequest request) {
+
+        private TransactionResponse toResponse(Transaction transaction) {
+
+        return new TransactionResponse(
+                transaction.getId(),
+                transaction.getAmount(),
+                transaction.getType(),
+                transaction.getDescription(),
+                transaction.getTransactionDate(),
+                transaction.getCreatedAt(),
+                transaction.getUpdatedAt()
+        );
+        }
+
+        public TransactionResponse createTransaction(
+                CreateTransactionRequest request) {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
@@ -52,26 +67,32 @@ public class TransactionService {
         transaction.setCreatedAt(now);
         transaction.setUpdatedAt(now);
 
-        return transactionRepository.save(transaction);
-    }
+        Transaction savedTransaction= transactionRepository.save(transaction);
+        return toResponse(savedTransaction);
+        }
 
-    public List<Transaction> getMyTransactions() {
-
-        Long userId = SecurityUtil.getCurrentUserId();
-
-        return transactionRepository.findByUserId(userId);
-    }
-
-    public Transaction getMyTransaction(Long transactionId) {
+        public List<TransactionResponse> getMyTransactions() {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
-        return transactionRepository
+                return transactionRepository
+                .findByUserId(userId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+        }
+
+        public TransactionResponse getMyTransaction(Long transactionId) {
+
+        Long userId = SecurityUtil.getCurrentUserId();
+
+        Transaction transaction= transactionRepository
                 .findByIdAndUserId(transactionId, userId)
                 .orElseThrow(() ->
                         new RuntimeException(
                                 "Transaction not found"
                         )
                 );
-    }
+                return toResponse(transaction);
+        }
 }
