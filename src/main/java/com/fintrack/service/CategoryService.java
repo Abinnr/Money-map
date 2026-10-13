@@ -3,6 +3,7 @@ package com.fintrack.service;
 import com.fintrack.dto.CreateCategoryRequest;
 import com.fintrack.entity.Category;
 import com.fintrack.entity.User;
+import com.fintrack.exception.ResourceNotFoundException;
 import com.fintrack.repository.CategoryRepository;
 import com.fintrack.repository.UserRepository;
 import com.fintrack.security.SecurityUtil;
@@ -68,7 +69,7 @@ public class CategoryService {
         return categoryRepository
                 .findByIdAndUserId(categoryId, userId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Category not found"
                         )
                 );

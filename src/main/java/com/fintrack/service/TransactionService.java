@@ -4,6 +4,7 @@ import com.fintrack.dto.CreateTransactionRequest;
 import com.fintrack.dto.TransactionResponse;
 import com.fintrack.entity.Transaction;
 import com.fintrack.entity.User;
+import com.fintrack.exception.ResourceNotFoundException;
 import com.fintrack.repository.TransactionRepository;
 import com.fintrack.repository.UserRepository;
 import com.fintrack.security.SecurityUtil;
@@ -89,7 +90,7 @@ public class TransactionService {
         Transaction transaction= transactionRepository
                 .findByIdAndUserId(transactionId, userId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Transaction not found"
                         )
                 );

@@ -16,9 +16,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidCredentialsException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-public String handleInvalidCredentials(InvalidCredentialsException exception) {
+    public String handleInvalidCredentials(InvalidCredentialsException exception) {
+
+        return exception.getMessage();
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String handleResourceNotFound(ResourceNotFoundException exception) {
 
     return exception.getMessage();
-}
+    }
 
 }
