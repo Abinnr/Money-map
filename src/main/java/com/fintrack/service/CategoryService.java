@@ -1,5 +1,6 @@
 package com.fintrack.service;
 
+import com.fintrack.dto.CategoryResponse;
 import com.fintrack.dto.CreateCategoryRequest;
 import com.fintrack.entity.Category;
 import com.fintrack.entity.User;
@@ -16,19 +17,31 @@ import java.util.List;
 @Service
 public class CategoryService {
 
-    private final CategoryRepository categoryRepository;
-    private final UserRepository userRepository;
+        private final CategoryRepository categoryRepository;
+        private final UserRepository userRepository;
 
-    public CategoryService(
-            CategoryRepository categoryRepository,
-            UserRepository userRepository) {
+        public CategoryService(
+                CategoryRepository categoryRepository,
+                UserRepository userRepository) {
 
-        this.categoryRepository = categoryRepository;
-        this.userRepository = userRepository;
-    }
+                this.categoryRepository = categoryRepository;
+                this.userRepository = userRepository;
+        }
 
-    public Category createCategory(
-            CreateCategoryRequest request) {
+        private CategoryResponse toResponse(Category category) {
+
+        return new CategoryResponse(
+                category.getId(),
+                category.getName(),
+                category.getType(),
+                category.isActive(),
+                category.getCreatedAt(),
+                category.getUpdatedAt()
+        );
+        }
+
+        public CategoryResponse createCategory(
+                CreateCategoryRequest request) {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
@@ -51,27 +64,33 @@ public class CategoryService {
         category.setCreatedAt(now);
         category.setUpdatedAt(now);
 
-        return categoryRepository.save(category);
-    }
+                Category SavedCategory=categoryRepository.save(category);
 
-    public List<Category> getAvailableCategories() {
+                return toResponse(SavedCategory);
+        }
 
-        Long userId = SecurityUtil.getCurrentUserId();
-
-        return categoryRepository
-                .findAvailableCategories(userId);
-    }
-
-    public Category getMyCategory(Long categoryId) {
+        public List<CategoryResponse> getAvailableCategories() {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
         return categoryRepository
+                .findAvailableCategories(userId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+        }
+
+        public CategoryResponse getMyCategory(Long categoryId) {
+
+        Long userId = SecurityUtil.getCurrentUserId();
+
+        Category category= categoryRepository
                 .findByIdAndUserId(categoryId, userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Category not found"
                         )
                 );
-    }
+                return toResponse(category);
+        }
 }
