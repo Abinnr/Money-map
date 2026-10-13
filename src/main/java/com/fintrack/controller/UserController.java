@@ -26,7 +26,7 @@ public class UserController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public String register(@Valid @RequestBody RegisterRequest request) {
-
+        System.out.println("request reached register controller");
         userService.register(request);
 
         return "User registered successfully";

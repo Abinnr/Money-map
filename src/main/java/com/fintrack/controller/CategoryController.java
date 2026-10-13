@@ -1,0 +1,46 @@
+package com.fintrack.controller;
+
+import com.fintrack.dto.CreateCategoryRequest;
+import com.fintrack.entity.Category;
+import com.fintrack.service.CategoryService;
+
+import jakarta.validation.Valid;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/categories")
+public class CategoryController {
+
+    private final CategoryService categoryService;
+
+    public CategoryController(
+            CategoryService categoryService) {
+
+        this.categoryService = categoryService;
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Category createCategory(
+            @Valid @RequestBody CreateCategoryRequest request) {
+
+        return categoryService.createCategory(request);
+    }
+
+    @GetMapping
+    public List<Category> getAvailableCategories() {
+
+        return categoryService.getAvailableCategories();
+    }
+
+    @GetMapping("/{id}")
+    public Category getMyCategory(
+            @PathVariable Long id) {
+
+        return categoryService.getMyCategory(id);
+    }
+}
