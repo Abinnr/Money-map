@@ -1,6 +1,8 @@
 package com.fintrack.repository;
 
 import com.fintrack.entity.Category;
+import com.fintrack.entity.CategoryType;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -26,4 +28,10 @@ public interface CategoryRepository
             Long categoryId,
             Long userId
     );
+
+    boolean existsByNameIgnoreCaseAndTypeAndUserIdAndIsActiveTrue(
+        String name,
+        CategoryType type,
+        Long userId
+        );
 }

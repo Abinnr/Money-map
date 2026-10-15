@@ -2,6 +2,7 @@ package com.fintrack.controller;
 
 import com.fintrack.dto.CategoryResponse;
 import com.fintrack.dto.CreateCategoryRequest;
+import com.fintrack.dto.UpdateCategoryRequest;
 import com.fintrack.entity.Category;
 import com.fintrack.service.CategoryService;
 
@@ -43,5 +44,21 @@ public class CategoryController {
             @PathVariable Long id) {
 
         return categoryService.getMyCategory(id);
+    }
+
+    @PutMapping("/{id}")
+    public CategoryResponse updateCategory(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateCategoryRequest request) {
+
+        return categoryService.updateCategory(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCategory(
+            @PathVariable Long id) {
+
+        categoryService.deleteCategory(id);
     }
 }

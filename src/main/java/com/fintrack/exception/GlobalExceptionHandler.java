@@ -28,4 +28,20 @@ public class GlobalExceptionHandler {
     return exception.getMessage();
     }
 
+    @ExceptionHandler(CategoryAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public String handleCategoryAlreadyExists(
+            CategoryAlreadyExistsException exception) {
+
+        return exception.getMessage();
+    }
+
+    @ExceptionHandler(SystemCategoryModificationException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public String handleSystemCategoryModification(
+            SystemCategoryModificationException exception) {
+
+        return exception.getMessage();
+    }
+
 }
