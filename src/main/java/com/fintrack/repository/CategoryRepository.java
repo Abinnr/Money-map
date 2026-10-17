@@ -24,7 +24,7 @@ public interface CategoryRepository
     List<Category> findAvailableCategories(Long userId);
     
 
-    Optional<Category> findByIdAndUserId(
+    Optional<Category> findByIdAndUserIdAndIsActiveTrue(
             Long categoryId,
             Long userId
     );
