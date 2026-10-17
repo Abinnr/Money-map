@@ -109,7 +109,7 @@ public class CategoryService {
         Long userId = SecurityUtil.getCurrentUserId();
 
         Category category= categoryRepository
-                .findByIdAndUserId(categoryId, userId)
+                .findByIdAndUserIdAndIsActiveTrue(categoryId, userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Category not found"
@@ -126,7 +126,7 @@ public class CategoryService {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
-        Category category =categoryRepository.findByIdAndUserId(categoryId,userId)
+        Category category =categoryRepository.findByIdAndUserIdAndIsActiveTrue(categoryId,userId)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Category not found"
@@ -166,7 +166,7 @@ public class CategoryService {
         Long userId = SecurityUtil.getCurrentUserId();
 
         Category category =
-                categoryRepository.findByIdAndUserId(categoryId,userId)
+                categoryRepository.findByIdAndUserIdAndIsActiveTrue(categoryId,userId)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Category not found"
