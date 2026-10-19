@@ -2,9 +2,14 @@ package com.fintrack.service;
 
 import com.fintrack.dto.CreateTransactionRequest;
 import com.fintrack.dto.TransactionResponse;
+import com.fintrack.entity.Category;
 import com.fintrack.entity.Transaction;
+import com.fintrack.entity.CategoryType;
+import com.fintrack.entity.TransactionType;
 import com.fintrack.entity.User;
+import com.fintrack.exception.InvalidCategoryException;
 import com.fintrack.exception.ResourceNotFoundException;
+import com.fintrack.repository.CategoryRepository;
 import com.fintrack.repository.TransactionRepository;
 import com.fintrack.repository.UserRepository;
 import com.fintrack.security.SecurityUtil;
@@ -17,40 +22,43 @@ import java.util.List;
 @Service
 public class TransactionService {
 
-        private final TransactionRepository transactionRepository;
-        private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
 
-        public TransactionService(
-                TransactionRepository transactionRepository,
-                UserRepository userRepository) {
+    public TransactionService(
+            TransactionRepository transactionRepository,
+            UserRepository userRepository,
+            CategoryRepository categoryRepository) {
 
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
-        }
+        this.categoryRepository = categoryRepository;
+    }
 
-
-        private TransactionResponse toResponse(Transaction transaction) {
-
-        return new TransactionResponse(
-                transaction.getId(),
-                transaction.getAmount(),
-                transaction.getType(),
-                transaction.getDescription(),
-                transaction.getTransactionDate(),
-                transaction.getCreatedAt(),
-                transaction.getUpdatedAt()
-        );
-        }
-
-        public TransactionResponse createTransaction(
-                CreateTransactionRequest request) {
+    public TransactionResponse createTransaction(
+            CreateTransactionRequest request) {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found")
+                        new ResourceNotFoundException(
+                                "User not found"
+                        )
                 );
+
+        Category category =
+                categoryRepository.findById(
+                        request.getCategoryId()
+                )
+                .orElseThrow(() ->
+                        new InvalidCategoryException(
+                                "Category not found"
+                        )
+                );
+
+        validateCategory(category, userId, request.getType());
 
         Transaction transaction = new Transaction();
 
@@ -62,38 +70,98 @@ public class TransactionService {
         );
 
         transaction.setUser(user);
+        transaction.setCategory(category);
 
         LocalDateTime now = LocalDateTime.now();
 
         transaction.setCreatedAt(now);
         transaction.setUpdatedAt(now);
 
-        Transaction savedTransaction= transactionRepository.save(transaction);
-        return toResponse(savedTransaction);
-        }
+        Transaction savedTransaction =
+                transactionRepository.save(transaction);
 
-        public List<TransactionResponse> getMyTransactions() {
+        return toResponse(savedTransaction);
+    }
+
+    public List<TransactionResponse> getMyTransactions() {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
-                return transactionRepository
+        return transactionRepository
                 .findByUserId(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
-        }
+    }
 
-        public TransactionResponse getMyTransaction(Long transactionId) {
+    public TransactionResponse getMyTransaction(
+            Long transactionId) {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
-        Transaction transaction= transactionRepository
-                .findByIdAndUserId(transactionId, userId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Transaction not found"
+        Transaction transaction =
+                transactionRepository
+                        .findByIdAndUserId(
+                                transactionId,
+                                userId
                         )
-                );
-                return toResponse(transaction);
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Transaction not found"
+                                )
+                        );
+
+        return toResponse(transaction);
+    }
+
+    private void validateCategory(
+            Category category,
+            Long userId,
+            TransactionType transactionType) {
+
+        if (!category.isActive()) {
+            throw new InvalidCategoryException(
+                    "Category is inactive"
+            );
         }
+
+        boolean isSystemCategory =
+                category.getUser() == null;
+
+        boolean belongsToUser =
+                category.getUser() != null
+                        && category.getUser()
+                        .getId()
+                        .equals(userId);
+
+        if (!isSystemCategory && !belongsToUser) {
+            throw new InvalidCategoryException(
+                    "Category is not available"
+            );
+        }
+
+        if (!category.getType().name()
+        .equals(transactionType.name())) {
+            throw new InvalidCategoryException(
+                    "Category type does not match transaction type"
+            );
+        }
+    }
+
+    private TransactionResponse toResponse(
+            Transaction transaction) {
+
+        return new TransactionResponse(
+                transaction.getId(),
+                transaction.getAmount(),
+                transaction.getType(),
+                transaction.getDescription(),
+                transaction.getTransactionDate(),
+                transaction.getCreatedAt(),
+                transaction.getUpdatedAt(),
+                transaction.getCategory().getId(),
+                transaction.getCategory().getName(),
+                transaction.getCategory().getType()
+        );
+    }
 }

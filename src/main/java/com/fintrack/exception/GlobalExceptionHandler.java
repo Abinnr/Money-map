@@ -44,4 +44,12 @@ public class GlobalExceptionHandler {
         return exception.getMessage();
     }
 
+    @ExceptionHandler(InvalidCategoryException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+        public String handleInvalidCategory(
+            InvalidCategoryException exception) {
+
+    return exception.getMessage();
+    }
+
 }

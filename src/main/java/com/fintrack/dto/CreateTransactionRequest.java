@@ -24,6 +24,9 @@ public class CreateTransactionRequest {
     @NotNull(message = "Transaction date is required")
     private LocalDateTime transactionDate;
 
+    @NotNull(message = "Category is required")
+    private Long categoryId;
+
     public CreateTransactionRequest() {
     }
 
@@ -60,4 +63,13 @@ public LocalDateTime getTransactionDate() {
 public void setTransactionDate(LocalDateTime transactionDate) {
     this.transactionDate = transactionDate;
 }
+
+public Long getCategoryId() {
+        return categoryId;
+}
+
+public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
+}
+
 }

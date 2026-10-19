@@ -1,5 +1,6 @@
 package com.fintrack.dto;
 
+import com.fintrack.entity.CategoryType;
 import com.fintrack.entity.TransactionType;
 
 import java.math.BigDecimal;
@@ -15,6 +16,10 @@ public class TransactionResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private Long categoryId;
+    private String categoryName;
+    private CategoryType categoryType;
+
     public TransactionResponse() {
     }
 
@@ -25,7 +30,10 @@ public class TransactionResponse {
             String description,
             LocalDateTime transactionDate,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt) {
+            LocalDateTime updatedAt,
+            Long categoryId,
+            String categoryName,
+            CategoryType categoryType) {
 
         this.id = id;
         this.amount = amount;
@@ -34,6 +42,9 @@ public class TransactionResponse {
         this.transactionDate = transactionDate;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.categoryId = categoryId;
+        this.categoryName = categoryName;
+        this.categoryType = categoryType;
     }
 
     public Long getId() {
@@ -62,5 +73,17 @@ public class TransactionResponse {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Long getCategoryId() {
+        return categoryId;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public CategoryType getCategoryType() {
+        return categoryType;
     }
 }
