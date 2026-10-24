@@ -2,6 +2,7 @@ package com.fintrack.controller;
 
 import com.fintrack.dto.CreateTransactionRequest;
 import com.fintrack.dto.TransactionResponse;
+import com.fintrack.dto.UpdateTransactionRequest;
 import com.fintrack.entity.Transaction;
 import com.fintrack.service.TransactionService;
 
@@ -43,5 +44,16 @@ public class TransactionController {
             @PathVariable Long id) {
 
         return transactionService.getMyTransaction(id);
+    }
+
+    @PutMapping("/{id}")
+    public TransactionResponse updateTransaction(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTransactionRequest request) {
+
+        return transactionService.updateTransaction(
+                id,
+                request
+        );
     }
 }

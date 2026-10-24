@@ -2,6 +2,7 @@ package com.fintrack.service;
 
 import com.fintrack.dto.CreateTransactionRequest;
 import com.fintrack.dto.TransactionResponse;
+import com.fintrack.dto.UpdateTransactionRequest;
 import com.fintrack.entity.Category;
 import com.fintrack.entity.Transaction;
 import com.fintrack.entity.CategoryType;
@@ -114,54 +115,114 @@ public class TransactionService {
         return toResponse(transaction);
     }
 
-    private void validateCategory(
-            Category category,
-            Long userId,
-            TransactionType transactionType) {
 
-        if (!category.isActive()) {
-            throw new InvalidCategoryException(
-                    "Category is inactive"
-            );
-        }
+        public TransactionResponse updateTransaction(
+                Long transactionId,
+                UpdateTransactionRequest request) {
 
-        boolean isSystemCategory =
-                category.getUser() == null;
+        Long userId = SecurityUtil.getCurrentUserId();
 
-        boolean belongsToUser =
-                category.getUser() != null
-                        && category.getUser()
-                        .getId()
-                        .equals(userId);
+        Transaction transaction =
+                transactionRepository
+                        .findByIdAndUserId(
+                                transactionId,
+                                userId
+                        )
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Transaction not found"
+                                )
+                        );
 
-        if (!isSystemCategory && !belongsToUser) {
-            throw new InvalidCategoryException(
-                    "Category is not available"
-            );
-        }
+        Category category =
+                categoryRepository
+                        .findById(request.getCategoryId())
+                        .orElseThrow(() ->
+                                new InvalidCategoryException(
+                                        "Category not found"
+                                )
+                        );
 
-        if (!category.getType().name()
-        .equals(transactionType.name())) {
-            throw new InvalidCategoryException(
-                    "Category type does not match transaction type"
-            );
-        }
-    }
-
-    private TransactionResponse toResponse(
-            Transaction transaction) {
-
-        return new TransactionResponse(
-                transaction.getId(),
-                transaction.getAmount(),
-                transaction.getType(),
-                transaction.getDescription(),
-                transaction.getTransactionDate(),
-                transaction.getCreatedAt(),
-                transaction.getUpdatedAt(),
-                transaction.getCategory().getId(),
-                transaction.getCategory().getName(),
-                transaction.getCategory().getType()
+        validateCategory(
+                category,
+                userId,
+                request.getType()
         );
-    }
+
+        transaction.setAmount(request.getAmount());
+
+        transaction.setType(request.getType());
+
+        transaction.setDescription(
+                request.getDescription()
+        );
+
+        transaction.setTransactionDate(
+                request.getTransactionDate()
+        );
+
+        transaction.setCategory(category);
+
+        transaction.setUpdatedAt(
+                LocalDateTime.now()
+        );
+
+        Transaction updatedTransaction =
+                transactionRepository.save(transaction);
+
+        return toResponse(updatedTransaction);
+        }
+
+
+        //validate category
+        private void validateCategory(
+                Category category,
+                Long userId,
+                TransactionType transactionType) {
+
+                if (!category.isActive()) {
+                throw new InvalidCategoryException(
+                        "Category is inactive"
+                );
+                }
+
+                boolean isSystemCategory =
+                        category.getUser() == null;
+
+                boolean belongsToUser =
+                        category.getUser() != null
+                                && category.getUser()
+                                .getId()
+                                .equals(userId);
+
+                if (!isSystemCategory && !belongsToUser) {
+                throw new InvalidCategoryException(
+                        "Category is not available"
+                );
+                }
+
+                if (!category.getType().name()
+                .equals(transactionType.name())) {
+                throw new InvalidCategoryException(
+                        "Category type does not match transaction type"
+                );
+                }
+        }
+
+        private TransactionResponse toResponse(
+                Transaction transaction) {
+
+                return new TransactionResponse(
+                        transaction.getId(),
+                        transaction.getAmount(),
+                        transaction.getType(),
+                        transaction.getDescription(),
+                        transaction.getTransactionDate(),
+                        transaction.getCreatedAt(),
+                        transaction.getUpdatedAt(),
+                        transaction.getCategory().getId(),
+                        transaction.getCategory().getName(),
+                        transaction.getCategory().getType()
+                );
+        }
 }
