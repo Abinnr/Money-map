@@ -56,4 +56,12 @@ public class TransactionController {
                 request
         );
     }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTransaction(
+            @PathVariable Long id) {
+
+        transactionService.deleteTransaction(id);
+    }
 }

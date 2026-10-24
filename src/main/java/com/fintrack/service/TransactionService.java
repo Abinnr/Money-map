@@ -63,6 +63,8 @@ public class TransactionService {
 
         Transaction transaction = new Transaction();
 
+        transaction.setDeleted(false);
+
         transaction.setAmount(request.getAmount());
         transaction.setType(request.getType());
         transaction.setDescription(request.getDescription());
@@ -84,17 +86,21 @@ public class TransactionService {
         return toResponse(savedTransaction);
     }
 
+
+    //get all transactions
     public List<TransactionResponse> getMyTransactions() {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
         return transactionRepository
-                .findByUserId(userId)
+                .findByUserIdAndIsDeletedFalse(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+
+    //get one transaction
     public TransactionResponse getMyTransaction(
             Long transactionId) {
 
@@ -102,7 +108,7 @@ public class TransactionService {
 
         Transaction transaction =
                 transactionRepository
-                        .findByIdAndUserId(
+                        .findByIdAndUserIdAndIsDeletedFalse(
                                 transactionId,
                                 userId
                         )
@@ -116,6 +122,8 @@ public class TransactionService {
     }
 
 
+
+    // update transaction
         public TransactionResponse updateTransaction(
                 Long transactionId,
                 UpdateTransactionRequest request) {
@@ -124,7 +132,7 @@ public class TransactionService {
 
         Transaction transaction =
                 transactionRepository
-                        .findByIdAndUserId(
+                        .findByIdAndUserIdAndIsDeletedFalse(
                                 transactionId,
                                 userId
                         )
@@ -171,6 +179,30 @@ public class TransactionService {
                 transactionRepository.save(transaction);
 
         return toResponse(updatedTransaction);
+        }
+
+
+        // soft delete a transation
+        public void deleteTransaction(Long transactionId) {
+
+        Long userId = SecurityUtil.getCurrentUserId();
+
+        Transaction transaction =
+                transactionRepository
+                        .findByIdAndUserIdAndIsDeletedFalse(
+                                transactionId,
+                                userId
+                        )
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Transaction not found"
+                                )
+                        );
+
+        transaction.setDeleted(true);
+        transaction.setUpdatedAt(LocalDateTime.now());
+
+        transactionRepository.save(transaction);
         }
 
 

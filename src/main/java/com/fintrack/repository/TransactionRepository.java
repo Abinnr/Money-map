@@ -10,11 +10,12 @@ import java.util.Optional;
 public interface TransactionRepository
         extends JpaRepository<Transaction, Long> {
 
-    List<Transaction> findByUserId(Long userId);
-             
+        List<Transaction> findByUserIdAndIsDeletedFalse(
+                Long userId
+        );
 
-    Optional<Transaction> findByIdAndUserId(
-            Long transactionId,
-            Long userId
-    );
+        Optional<Transaction> findByIdAndUserIdAndIsDeletedFalse(
+                Long transactionId,
+                Long userId
+        );
 }

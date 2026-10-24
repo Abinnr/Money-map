@@ -39,6 +39,9 @@ public class Transaction {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    @Column(nullable = false)
+    private boolean isDeleted;
+
     public Transaction() {
     }
 
@@ -46,71 +49,79 @@ public class Transaction {
 
     public Long getId() {
     return id;
-}
+    }
 
 
 
-public BigDecimal getAmount() {
-    return amount;
-}
+    public BigDecimal getAmount() {
+        return amount;
+    }
 
-public void setAmount(BigDecimal amount) {
-    this.amount = amount;
-}
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
 
-public TransactionType getType() {
-    return type;
-}
+    public TransactionType getType() {
+        return type;
+    }
 
-public void setType(TransactionType type) {
-    this.type = type;
-}
+    public void setType(TransactionType type) {
+        this.type = type;
+    }
 
-public String getDescription() {
-    return description;
-}
+    public String getDescription() {
+        return description;
+    }
 
-public void setDescription(String description) {
-    this.description = description;
-}
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-public LocalDateTime getTransactionDate() {
-    return transactionDate;
-}
+    public LocalDateTime getTransactionDate() {
+        return transactionDate;
+    }
 
-public void setTransactionDate(LocalDateTime transactionDate) {
-    this.transactionDate = transactionDate;
-}
+    public void setTransactionDate(LocalDateTime transactionDate) {
+        this.transactionDate = transactionDate;
+    }
 
-public LocalDateTime getCreatedAt() {
-    return createdAt;
-}
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 
-public void setCreatedAt(LocalDateTime createdAt) {
-    this.createdAt = createdAt;
-}
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
-public LocalDateTime getUpdatedAt() {
-    return updatedAt;
-}
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 
-public void setUpdatedAt(LocalDateTime updatedAt) {
-    this.updatedAt = updatedAt;
-}
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
-public User getUser() {
-    return user;
-}
+    public User getUser() {
+        return user;
+    }
 
-public void setUser(User user) {
-    this.user = user;
-}
+    public void setUser(User user) {
+        this.user = user;
+    }
 
-public Category getCategory() {
-    return category;
-}
+    public Category getCategory() {
+        return category;
+    }
 
-public void setCategory(Category category) {
-    this.category = category;
-}
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
+    }
 }
