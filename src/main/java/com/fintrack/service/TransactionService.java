@@ -12,9 +12,11 @@ import com.fintrack.exception.InvalidCategoryException;
 import com.fintrack.exception.ResourceNotFoundException;
 import com.fintrack.repository.CategoryRepository;
 import com.fintrack.repository.TransactionRepository;
+import com.fintrack.repository.TransactionSpecification;
 import com.fintrack.repository.UserRepository;
 import com.fintrack.security.SecurityUtil;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -88,16 +90,49 @@ public class TransactionService {
 
 
     //get all transactions
-    public List<TransactionResponse> getMyTransactions() {
+        public List<TransactionResponse> getMyTransactions(
+                TransactionType type,
+                Long categoryId,
+                LocalDateTime from,
+                LocalDateTime to) {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
+        Specification<Transaction> specification =
+                Specification
+                        .where(TransactionSpecification.hasUserId(userId))
+                        .and(TransactionSpecification.isNotDeleted());
+
+        if (type != null) {
+                specification = specification.and(
+                        TransactionSpecification.hasType(type)
+                );
+        }
+
+        if (categoryId != null) {
+                specification = specification.and(
+                        TransactionSpecification.hasCategoryId(categoryId)
+                );
+        }
+
+        if (from != null) {
+                specification = specification.and(
+                        TransactionSpecification.dateFrom(from)
+                );
+        }
+
+        if (to != null) {
+                specification = specification.and(
+                        TransactionSpecification.dateTo(to)
+                );
+        }
+
         return transactionRepository
-                .findByUserIdAndIsDeletedFalse(userId)
+                .findAll(specification)
                 .stream()
                 .map(this::toResponse)
                 .toList();
-    }
+        }
 
 
     //get one transaction

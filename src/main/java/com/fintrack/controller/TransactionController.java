@@ -4,6 +4,7 @@ import com.fintrack.dto.CreateTransactionRequest;
 import com.fintrack.dto.TransactionResponse;
 import com.fintrack.dto.UpdateTransactionRequest;
 import com.fintrack.entity.Transaction;
+import com.fintrack.entity.TransactionType;
 import com.fintrack.service.TransactionService;
 
 import jakarta.validation.Valid;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -34,9 +36,26 @@ public class TransactionController {
     }
 
     @GetMapping  // to retrieve all transaction list.
-    public List<TransactionResponse> getMyTransactions() {
+    public List<TransactionResponse> getMyTransactions(
 
-        return transactionService.getMyTransactions();
+            @RequestParam(required = false)
+            TransactionType type,
+
+            @RequestParam(required = false)
+            Long categoryId,
+
+            @RequestParam(required = false)
+            LocalDateTime from,
+
+            @RequestParam(required = false)
+            LocalDateTime to) {
+
+        return transactionService.getMyTransactions(
+                type,
+                categoryId,
+                from,
+                to
+        );
     }
 
     @GetMapping("/{id}")  // to retreive a particular selected trancation 
