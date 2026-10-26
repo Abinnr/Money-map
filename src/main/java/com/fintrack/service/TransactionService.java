@@ -1,6 +1,7 @@
 package com.fintrack.service;
 
 import com.fintrack.dto.CreateTransactionRequest;
+import com.fintrack.dto.TransactionPageResponse;
 import com.fintrack.dto.TransactionResponse;
 import com.fintrack.dto.UpdateTransactionRequest;
 import com.fintrack.entity.Category;
@@ -18,6 +19,9 @@ import com.fintrack.security.SecurityUtil;
 
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -90,11 +94,12 @@ public class TransactionService {
 
 
     //get all transactions
-        public List<TransactionResponse> getMyTransactions(
-                TransactionType type,
-                Long categoryId,
-                LocalDateTime from,
-                LocalDateTime to) {
+        public TransactionPageResponse getMyTransactions(
+        TransactionType type,
+        Long categoryId,
+        LocalDateTime from,
+        LocalDateTime to,
+        Pageable pageable) {
 
         Long userId = SecurityUtil.getCurrentUserId();
 
@@ -127,11 +132,25 @@ public class TransactionService {
                 );
         }
 
-        return transactionRepository
-                .findAll(specification)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        Page<Transaction> transactionPage =
+            transactionRepository.findAll(
+                    specification,
+                    pageable
+            );
+
+        List<TransactionResponse> content =
+            transactionPage.getContent()
+                    .stream()
+                    .map(this::toResponse)
+                    .toList();
+
+        return new TransactionPageResponse(
+            content,
+            transactionPage.getNumber(),
+            transactionPage.getSize(),
+            transactionPage.getTotalElements(),
+            transactionPage.getTotalPages()
+    );
         }
 
 

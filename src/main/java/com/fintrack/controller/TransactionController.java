@@ -6,11 +6,13 @@ import com.fintrack.dto.UpdateTransactionRequest;
 import com.fintrack.entity.Transaction;
 import com.fintrack.entity.TransactionType;
 import com.fintrack.service.TransactionService;
+import com.fintrack.dto.TransactionPageResponse;
 
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,7 +38,7 @@ public class TransactionController {
     }
 
     @GetMapping  // to retrieve all transaction list.
-    public List<TransactionResponse> getMyTransactions(
+    public TransactionPageResponse getMyTransactions(
 
             @RequestParam(required = false)
             TransactionType type,
@@ -48,14 +50,18 @@ public class TransactionController {
             LocalDateTime from,
 
             @RequestParam(required = false)
-            LocalDateTime to) {
+            LocalDateTime to,
+        
+            Pageable pageable) 
+            {
 
-        return transactionService.getMyTransactions(
+            return transactionService.getMyTransactions(
                 type,
                 categoryId,
                 from,
-                to
-        );
+                to,
+                pageable
+            );
     }
 
     @GetMapping("/{id}")  // to retreive a particular selected trancation 
