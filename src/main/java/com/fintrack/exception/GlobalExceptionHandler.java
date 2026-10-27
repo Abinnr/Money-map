@@ -64,4 +64,20 @@ public class GlobalExceptionHandler {
     return exception.getMessage();
     }
 
+    @ExceptionHandler(BudgetAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public String handleBudgetAlreadyExists(
+            BudgetAlreadyExistsException exception) {
+
+        return exception.getMessage();
+    }
+
+
+    @ExceptionHandler(InvalidBudgetException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleInvalidBudget(
+            InvalidBudgetException exception) {
+
+        return exception.getMessage();
+    }
 }
