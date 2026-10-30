@@ -2,6 +2,7 @@ package com.fintrack.repository;
 
 import com.fintrack.entity.Transaction;
 import com.fintrack.entity.TransactionType;
+import com.fintrack.repository.projection.CategoryExpenseSummary;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -39,5 +40,29 @@ public interface TransactionRepository
                 TransactionType type,
                 LocalDateTime from,
                 LocalDateTime to
+        );
+
+
+
+        
+        @Query("""
+        SELECT
+            t.category.id AS categoryId,
+            t.category.name AS categoryName,
+            SUM(t.amount) AS amount
+        FROM Transaction t
+        WHERE t.user.id = :userId
+        AND t.type = :type
+        AND t.transactionDate >= :from
+        AND t.transactionDate < :to
+        AND t.isDeleted = false
+        GROUP BY t.category.id, t.category.name
+        ORDER BY SUM(t.amount) DESC
+        """)
+        List<CategoryExpenseSummary> findExpenseSummaryByCategory(
+        Long userId,
+        TransactionType type,
+        LocalDateTime from,
+        LocalDateTime to
         );
 }

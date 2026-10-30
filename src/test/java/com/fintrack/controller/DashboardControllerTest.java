@@ -5,6 +5,7 @@ import com.fintrack.service.DashboardService;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -27,7 +28,8 @@ class DashboardControllerTest {
                         2026,
                         new BigDecimal("65000.00"),
                         new BigDecimal("3570.00"),
-                        new BigDecimal("61430.00")
+                        new BigDecimal("61430.00"),
+                        List.of()
                 );
 
         when(dashboardService.getMonthlySummary(10, 2026))

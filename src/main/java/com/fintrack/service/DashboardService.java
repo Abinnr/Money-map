@@ -1,14 +1,21 @@
 package com.fintrack.service;
 
+import com.fintrack.dto.DashboardCategoryBreakdownResponse;
 import com.fintrack.dto.DashboardSummaryResponse;
 import com.fintrack.entity.TransactionType;
 import com.fintrack.repository.TransactionRepository;
+import com.fintrack.repository.projection.CategoryExpenseSummary;
 import com.fintrack.security.SecurityUtil;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import com.fintrack.dto.DashboardCategoryBreakdownResponse;
+import com.fintrack.repository.projection.CategoryExpenseSummary;
+
+import java.util.List;
 
 @Service
 public class DashboardService {
@@ -58,12 +65,38 @@ public class DashboardService {
         BigDecimal balance =
                 totalIncome.subtract(totalExpenses);
 
-        return new DashboardSummaryResponse(
-                month,
-                year,
-                totalIncome,
-                totalExpenses,
-                balance
+        
+
+
+
+        List<CategoryExpenseSummary> categorySummaries =
+        transactionRepository.findExpenseSummaryByCategory(
+                userId,
+                TransactionType.EXPENSE,
+                from,
+                to
         );
+
+        List<DashboardCategoryBreakdownResponse> categoryBreakdown =
+        categorySummaries.stream()
+                .map(summary ->
+                        new DashboardCategoryBreakdownResponse(
+                                summary.getCategoryId(),
+                                summary.getCategoryName(),
+                                summary.getAmount()
+                        )
+                )
+                .toList();
+
+        
+         return new DashboardSummaryResponse(
+                        month,
+                        year,
+                        totalIncome,
+                        totalExpenses,
+                        balance,
+                        categoryBreakdown
+                );       
+
     }
 }

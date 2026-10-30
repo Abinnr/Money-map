@@ -1,6 +1,7 @@
 package com.fintrack.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class DashboardSummaryResponse {
 
@@ -11,6 +12,8 @@ public class DashboardSummaryResponse {
     private BigDecimal totalExpenses;
     private BigDecimal balance;
 
+    private List<DashboardCategoryBreakdownResponse> categoryBreakdown;
+
     public DashboardSummaryResponse() {
     }
 
@@ -19,13 +22,15 @@ public class DashboardSummaryResponse {
             int year,
             BigDecimal totalIncome,
             BigDecimal totalExpenses,
-            BigDecimal balance) {
+            BigDecimal balance,
+            List<DashboardCategoryBreakdownResponse> categoryBreakdown) {
 
         this.month = month;
         this.year = year;
         this.totalIncome = totalIncome;
         this.totalExpenses = totalExpenses;
         this.balance = balance;
+        this.categoryBreakdown = categoryBreakdown;
     }
 
     public int getMonth() {
@@ -46,5 +51,9 @@ public class DashboardSummaryResponse {
 
     public BigDecimal getBalance() {
         return balance;
+    }
+
+    public List<DashboardCategoryBreakdownResponse> getCategoryBreakdown() {
+        return categoryBreakdown;
     }
 }
