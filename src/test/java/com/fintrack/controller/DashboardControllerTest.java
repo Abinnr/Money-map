@@ -24,13 +24,14 @@ class DashboardControllerTest {
 
         DashboardSummaryResponse response =
                 new DashboardSummaryResponse(
-                        10,
-                        2026,
-                        new BigDecimal("65000.00"),
-                        new BigDecimal("3570.00"),
-                        new BigDecimal("61430.00"),
-                        List.of()
-                );
+        10,
+        2026,
+        new BigDecimal("65000.00"),
+        new BigDecimal("3570.00"),
+        new BigDecimal("61430.00"),
+        List.of(),
+        List.of()
+);
 
         when(dashboardService.getMonthlySummary(10, 2026))
                 .thenReturn(response);

@@ -13,6 +13,12 @@ public interface BudgetRepository
             Long userId
     );
 
+    List<Budget> findByUserIdAndMonthAndYearAndIsDeletedFalse(
+        Long userId,
+        int month,
+        int year
+     );
+
     Optional<Budget> findByIdAndUserIdAndIsDeletedFalse(
             Long budgetId,
             Long userId
