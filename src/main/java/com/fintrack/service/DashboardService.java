@@ -153,6 +153,13 @@ private final BudgetRepository budgetRepository;
                         .toList();
 
 
+
+                long transactionCount= transactionRepository.countByUserAndDateRange(
+                                userId,
+                                from,
+                                to
+                                );
+
          return new DashboardSummaryResponse(
                         month,
                         year,
@@ -160,8 +167,9 @@ private final BudgetRepository budgetRepository;
                         totalExpenses,
                         balance,
                         categoryBreakdown,
-                        budgetVsActual
-                );       
+                        budgetVsActual,
+                        transactionCount
+                );
 
     }
 }

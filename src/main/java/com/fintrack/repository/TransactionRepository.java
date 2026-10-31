@@ -65,4 +65,19 @@ public interface TransactionRepository
         LocalDateTime from,
         LocalDateTime to
         );
+
+
+        @Query("""
+        SELECT COUNT(t)
+        FROM Transaction t
+        WHERE t.user.id = :userId
+        AND t.transactionDate >= :from
+        AND t.transactionDate < :to
+        AND t.isDeleted = false
+        """)
+        long countByUserAndDateRange(
+        Long userId,
+        LocalDateTime from,
+        LocalDateTime to
+        );
 }

@@ -11,10 +11,13 @@ public class DashboardSummaryResponse {
     private BigDecimal totalIncome;
     private BigDecimal totalExpenses;
     private BigDecimal balance;
+    
 
     private List<DashboardCategoryBreakdownResponse> categoryBreakdown;
 
     private List<DashboardBudgetResponse> budgetVsActual;
+
+    private long transactionCount;
 
 
     public DashboardSummaryResponse() {
@@ -28,7 +31,9 @@ public class DashboardSummaryResponse {
             BigDecimal totalExpenses,
             BigDecimal balance,
             List<DashboardCategoryBreakdownResponse> categoryBreakdown,
-            List<DashboardBudgetResponse> budgetVsActual) {
+            List<DashboardBudgetResponse> budgetVsActual,
+            long transactionCount
+        ) {
 
         this.month = month;
         this.year = year;
@@ -37,6 +42,7 @@ public class DashboardSummaryResponse {
         this.balance = balance;
         this.categoryBreakdown = categoryBreakdown;
         this.budgetVsActual = budgetVsActual;
+        this.transactionCount=transactionCount;
     }
 
 
@@ -72,5 +78,9 @@ public class DashboardSummaryResponse {
 
     public List<DashboardBudgetResponse> getBudgetVsActual() {
         return budgetVsActual;
+    }
+    
+    public long getTransactionCount(){
+        return transactionCount;
     }
 }

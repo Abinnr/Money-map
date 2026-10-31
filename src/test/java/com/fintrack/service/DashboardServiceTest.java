@@ -86,6 +86,12 @@ class DashboardServiceTest {
                 eq(2026)
         )).thenReturn(List.of());
 
+        when(transactionRepository.countByUserAndDateRange(
+                anyLong(),
+                any(),
+                any()
+        )).thenReturn(10L);
+
 
         DashboardSummaryResponse response =
                 dashboardService.getMonthlySummary(10, 2026);
@@ -112,6 +118,8 @@ class DashboardServiceTest {
                 new BigDecimal("61430.00"),
                 response.getBalance()
         );
+
+        assertEquals(10, response.getTransactionCount());
     }
 
 
