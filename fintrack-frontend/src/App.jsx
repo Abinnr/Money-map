@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Login from "./components/Login";
+import Dashboard from "./components/Dashboard";
 
 function App() {
   const [authenticated, setAuthenticated] = useState(
@@ -10,7 +11,7 @@ function App() {
     return <Login onLogin={() => setAuthenticated(true)} />;
   }
 
-  return <h1>Dashboard coming next...</h1>;
+  return <Dashboard />;
 }
 
 export default App;
