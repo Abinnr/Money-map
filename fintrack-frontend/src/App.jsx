@@ -2,6 +2,8 @@ import { useState } from "react";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import Transactions from "./components/Transactions";
+import Categories from "./components/Categories";
+import Budgets from "./components/Budgets";
 import "./App.css";
 
 function App() {
@@ -38,11 +40,36 @@ function App() {
           >
             Transactions
           </button>
+
+          <button
+            className={page === "budgets" ? "nav-active" : ""}
+            onClick={() => setPage("budgets")}
+          >
+            Budgets
+          </button>
+
+          <button
+            className={page === "categories" ? "nav-active" : ""}
+            onClick={() => setPage("categories")}
+          >
+            Categories
+          </button>
           <button onClick={handleLogout}>Logout</button>
+
+
+          
         </nav>
       </header>
 
-      {page === "dashboard" ? <Dashboard /> : <Transactions />}
+      {page === "dashboard" ? (
+        <Dashboard />
+      ) : page === "transactions" ? (
+        <Transactions />
+      ) : page === "categories" ? (
+        <Categories />
+      ) : (
+        <Budgets />
+      )}
     </>
   );
 }

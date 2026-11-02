@@ -5,6 +5,9 @@ import java.math.BigDecimal;
 public class DashboardBudgetResponse {
 
     private Long categoryId;
+
+
+    
     private String categoryName;
     private BigDecimal budgetAmount;
     private BigDecimal actualAmount;
