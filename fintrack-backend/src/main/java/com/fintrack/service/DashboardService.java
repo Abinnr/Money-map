@@ -132,7 +132,7 @@ private final BudgetRepository budgetRepository;
                             BigDecimal remainingAmount =
                                     budgetAmount.subtract(actualAmount);
 
-                            BigDecimal percentageUsed =
+                            BigDecimal percentage =
                                     actualAmount
                                             .multiply(BigDecimal.valueOf(100))
                                             .divide(
@@ -140,6 +140,8 @@ private final BudgetRepository budgetRepository;
                                                     2,
                                                     RoundingMode.HALF_UP
                                             );
+                                   BigDecimal percentageUsed = percentage.min(BigDecimal.valueOf(100));
+
 
                         return new DashboardBudgetResponse(
                                     budget.getCategory().getId(),
