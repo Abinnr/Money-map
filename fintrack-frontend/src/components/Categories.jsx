@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import {
   getCategories,
@@ -11,7 +12,6 @@ function Categories() {
 
   const [name, setName] = useState("");
   const [type, setType] = useState("EXPENSE");
-
   const [editingId, setEditingId] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -24,9 +24,9 @@ function Categories() {
 
     try {
       const data = await getCategories();
-      setCategories(data);
-    } catch (error) {
-      setError("Failed to load categories.");
+      setCategories(data || []);
+    } catch {
+      setError("Failed to load categories. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -48,6 +48,7 @@ function Categories() {
     setName(category.name);
     setType(category.type);
     setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleSubmit(event) {
@@ -70,7 +71,7 @@ function Categories() {
 
       resetForm();
       await loadCategories();
-    } catch (error) {
+    } catch {
       setError(
         editingId === null
           ? "Failed to create category."
@@ -86,9 +87,7 @@ function Categories() {
       `Are you sure you want to delete "${category.name}"?`
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setError("");
 
@@ -100,45 +99,94 @@ function Categories() {
       }
 
       await loadCategories();
-    } catch (error) {
+    } catch {
       setError("Failed to delete category.");
     }
   }
 
-  if (loading) {
-    return <p>Loading categories...</p>;
-  }
+  const isActive = (category) =>
+    category.isActive ?? category.active ?? true;
+
+  const incomeCount = categories.filter(
+    (category) => category.type === "INCOME"
+  ).length;
+
+  const expenseCount = categories.filter(
+    (category) => category.type === "EXPENSE"
+  ).length;
 
   return (
-    <main>
-      <h1>Categories</h1>
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <span className="eyebrow">FINANCIAL ORGANIZATION</span>
+          <h1>Categories</h1>
+          <p className="muted">
+            Organize your income and expenses into meaningful groups.
+          </p>
+        </div>
 
-      <p>Manage your income and expense categories.</p>
+        <span className="count-badge">
+          {categories.length} categories
+        </span>
+      </div>
 
-      {error && <p>{error}</p>}
+      {error && (
+        <div className="alert alert-error">
+          {error}
+        </div>
+      )}
 
-      <section>
-        <h2>{editingId === null ? "Add Category" : "Edit Category"}</h2>
+      <div className="stats-grid stats-grid-three">
+        <div className="stat-card">
+          <span className="stat-label">Total categories</span>
+          <strong className="stat-value">{categories.length}</strong>
+          <span className="stat-description">All configured categories</span>
+        </div>
 
-        <form onSubmit={handleSubmit}>
+        <div className="stat-card">
+          <span className="stat-label">Income categories</span>
+          <strong className="stat-value positive-text">{incomeCount}</strong>
+          <span className="stat-description">For tracking earnings</span>
+        </div>
+
+        <div className="stat-card">
+          <span className="stat-label">Expense categories</span>
+          <strong className="stat-value negative-text">{expenseCount}</strong>
+          <span className="stat-description">For tracking spending</span>
+        </div>
+      </div>
+
+      <section className="card">
+        <div className="section-title">
+          <div className="section-icon">
+            <span>＋</span>
+          </div>
           <div>
-            <label htmlFor="category-name">Name</label>
+            <h2>{editingId === null ? "Create category" : "Edit category"}</h2>
+            <p className="muted">
+              Give your financial activities a clear structure.
+            </p>
+          </div>
+        </div>
 
+        <form className="modern-form category-form" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Category name</span>
             <input
-              id="category-name"
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Food"
+              placeholder="e.g. Groceries"
               disabled={saving}
+              maxLength={100}
+              required
             />
-          </div>
+          </label>
 
-          <div>
-            <label htmlFor="category-type">Type</label>
-
+          <label className="field">
+            <span>Category type</span>
             <select
-              id="category-type"
               value={type}
               onChange={(event) => setType(event.target.value)}
               disabled={saving}
@@ -146,76 +194,134 @@ function Categories() {
               <option value="EXPENSE">Expense</option>
               <option value="INCOME">Income</option>
             </select>
-          </div>
+          </label>
 
-          <button type="submit" disabled={saving}>
-            {saving
-              ? "Saving..."
-              : editingId === null
-                ? "Add Category"
-                : "Update Category"}
-          </button>
-
-          {editingId !== null && (
-            <button type="button" onClick={resetForm} disabled={saving}>
-              Cancel
+          <div className="form-actions full-width">
+            <button type="submit" disabled={saving}>
+              {saving
+                ? "Saving..."
+                : editingId === null
+                  ? "Create category"
+                  : "Update category"}
             </button>
-          )}
+
+            {editingId !== null && (
+              <button
+                type="button"
+                className="secondary"
+                onClick={resetForm}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </section>
 
-      <hr />
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <h2>All categories</h2>
+            <p className="muted">
+              Manage your available income and expense categories.
+            </p>
+          </div>
 
-      <section>
-        <h2>Category List</h2>
+          <button
+            className="secondary"
+            onClick={loadCategories}
+            disabled={loading}
+          >
+            ↻ Refresh
+          </button>
+        </div>
 
-        <button onClick={loadCategories} disabled={loading}>
-          Refresh
-        </button>
-
-        {categories.length === 0 ? (
-          <p>No categories found.</p>
+        {loading ? (
+          <div className="empty-state">
+            <p>Loading categories...</p>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">▦</div>
+            <h3>No categories yet</h3>
+            <p>Create a category to organize your transactions.</p>
+          </div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {categories.map((category) => (
-                <tr key={category.id}>
-                  <td>{category.name}</td>
-
-                  <td>{category.type}</td>
-
-                  <td>
-                    {category.active ? "Active" : "Inactive"}
-                  </td>
-
-                  <td>
-                    <button
-                      onClick={() => startEditing(category)}
-                      disabled={!category.active}
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(category)}
-                      disabled={!category.active}
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <div className="table-wrapper">
+            <table className="modern-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {categories.map((category) => {
+                  const active = isActive(category);
+
+                  return (
+                    <tr key={category.id}>
+                      <td>
+                        <div className="table-primary">
+                          <span className="category-avatar">
+                            {category.name?.charAt(0).toUpperCase()}
+                          </span>
+                          <strong>{category.name}</strong>
+                        </div>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`type-badge ${
+                            category.type === "INCOME"
+                              ? "income-badge"
+                              : "expense-badge"
+                          }`}
+                        >
+                          {category.type === "INCOME" ? "Income" : "Expense"}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`status-badge ${
+                            active ? "status-active" : "status-inactive"
+                          }`}
+                        >
+                          <span className="status-dot" />
+                          {active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+
+                      <td>
+                        <div className="row-actions">
+                          <button
+                            className="secondary small-button"
+                            onClick={() => startEditing(category)}
+                            disabled={!active}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="danger small-button"
+                            onClick={() => handleDelete(category)}
+                            disabled={!active}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>

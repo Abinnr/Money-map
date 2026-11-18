@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import {
   getBudgets,
@@ -6,6 +7,19 @@ import {
   deleteBudget,
 } from "../services/budgetService";
 import { getCategories } from "../services/categoryService";
+
+const MONTHS = [
+  "January", "February", "March", "April",
+  "May", "June", "July", "August",
+  "September", "October", "November", "December",
+];
+
+const currency = (value) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
 
 function Budgets() {
   const today = new Date();
@@ -17,7 +31,6 @@ function Budgets() {
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [year, setYear] = useState(today.getFullYear());
   const [categoryId, setCategoryId] = useState("");
-
   const [editingId, setEditingId] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -34,16 +47,17 @@ function Budgets() {
         getCategories(),
       ]);
 
-      setBudgets(budgetData);
+      setBudgets(budgetData || []);
 
-      const expenseCategories = categoryData.filter(
-        (category) =>
-          category.type === "EXPENSE" && category.active
+      setCategories(
+        (categoryData || []).filter(
+          (category) =>
+            category.type === "EXPENSE" &&
+            (category.isActive ?? category.active ?? true)
+        )
       );
-
-      setCategories(expenseCategories);
-    } catch (error) {
-      setError("Failed to load budgets.");
+    } catch {
+      setError("Failed to load budgets. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -64,11 +78,12 @@ function Budgets() {
 
   function startEditing(budget) {
     setEditingId(budget.id);
-    setAmount(budget.amount);
+    setAmount(String(budget.amount));
     setMonth(budget.month);
     setYear(budget.year);
     setCategoryId(String(budget.categoryId));
     setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleSubmit(event) {
@@ -79,8 +94,13 @@ function Budgets() {
       return;
     }
 
+    if (!Number.isInteger(Number(year)) || Number(year) < 2000) {
+      setError("Please enter a valid year.");
+      return;
+    }
+
     if (!categoryId) {
-      setError("Category is required.");
+      setError("Please select a category.");
       return;
     }
 
@@ -107,7 +127,7 @@ function Budgets() {
 
       resetForm();
       await loadData();
-    } catch (error) {
+    } catch {
       setError(
         editingId === null
           ? "Failed to create budget."
@@ -123,9 +143,7 @@ function Budgets() {
       `Are you sure you want to delete the budget for "${budget.categoryName}"?`
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setError("");
 
@@ -137,199 +155,213 @@ function Budgets() {
       }
 
       await loadData();
-    } catch (error) {
+    } catch {
       setError("Failed to delete budget.");
     }
   }
 
-  if (loading) {
-    return <p>Loading budgets...</p>;
-  }
-
   return (
-    <main>
-      <h1>Budgets</h1>
-      <p>Manage your monthly spending budgets.</p>
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <span className="eyebrow">FINANCIAL PLANNING</span>
+          <h1>Budgets</h1>
+          <p className="muted">
+            Plan your spending and stay in control of your money.
+          </p>
+        </div>
 
-      {error && <p>{error}</p>}
+        <span className="count-badge">
+          {budgets.length} budgets
+        </span>
+      </div>
 
-      <section>
-        <h2>
-          {editingId === null
-            ? "Add Budget"
-            : "Edit Budget"}
-        </h2>
+      {error && (
+        <div className="alert alert-error">
+          <span>{error}</span>
+        </div>
+      )}
 
-        <form onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="budget-amount">
-              Amount
-            </label>
-
-            <input
-              id="budget-amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={amount}
-              onChange={(event) =>
-                setAmount(event.target.value)
-              }
-              placeholder="e.g. 5000"
-              disabled={saving}
-            />
+      <section className="card">
+        <div className="section-title">
+          <div className="section-icon">
+            <span>₹</span>
           </div>
-
           <div>
-            <label htmlFor="budget-month">
-              Month
-            </label>
+            <h2>{editingId === null ? "Create a budget" : "Edit budget"}</h2>
+            <p className="muted">
+              Set a monthly spending limit for a category.
+            </p>
+          </div>
+        </div>
 
+        <form className="modern-form" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Budget amount</span>
+            <div className="input-with-prefix">
+              <span>₹</span>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="5000.00"
+                disabled={saving}
+                required
+              />
+            </div>
+          </label>
+
+          <label className="field">
+            <span>Category</span>
             <select
-              id="budget-month"
-              value={month}
-              onChange={(event) =>
-                setMonth(Number(event.target.value))
-              }
-              disabled={saving}
-            >
-              <option value={1}>January</option>
-              <option value={2}>February</option>
-              <option value={3}>March</option>
-              <option value={4}>April</option>
-              <option value={5}>May</option>
-              <option value={6}>June</option>
-              <option value={7}>July</option>
-              <option value={8}>August</option>
-              <option value={9}>September</option>
-              <option value={10}>October</option>
-              <option value={11}>November</option>
-              <option value={12}>December</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="budget-year">
-              Year
-            </label>
-
-            <input
-              id="budget-year"
-              type="number"
-              min="2000"
-              value={year}
-              onChange={(event) =>
-                setYear(Number(event.target.value))
-              }
-              disabled={saving}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="budget-category">
-              Category
-            </label>
-
-            <select
-              id="budget-category"
               value={categoryId}
-              onChange={(event) =>
-                setCategoryId(event.target.value)
-              }
+              onChange={(event) => setCategoryId(event.target.value)}
               disabled={saving}
+              required
             >
-              <option value="">
-                Select category
-              </option>
-
+              <option value="">Select expense category</option>
               {categories.map((category) => (
-                <option
-                  key={category.id}
-                  value={category.id}
-                >
+                <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
               ))}
             </select>
-          </div>
+          </label>
 
-          <button type="submit" disabled={saving}>
-            {saving
-              ? "Saving..."
-              : editingId === null
-                ? "Add Budget"
-                : "Update Budget"}
-          </button>
-
-          {editingId !== null && (
-            <button
-              type="button"
-              onClick={resetForm}
+          <label className="field">
+            <span>Month</span>
+            <select
+              value={month}
+              onChange={(event) => setMonth(Number(event.target.value))}
               disabled={saving}
             >
-              Cancel
+              {MONTHS.map((name, index) => (
+                <option key={name} value={index + 1}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field">
+            <span>Year</span>
+            <input
+              type="number"
+              min="2000"
+              value={year}
+              onChange={(event) => setYear(Number(event.target.value))}
+              disabled={saving}
+              required
+            />
+          </label>
+
+          <div className="form-actions full-width">
+            <button type="submit" disabled={saving}>
+              {saving
+                ? "Saving..."
+                : editingId === null
+                  ? "Create budget"
+                  : "Update budget"}
             </button>
-          )}
+
+            {editingId !== null && (
+              <button
+                type="button"
+                className="secondary"
+                onClick={resetForm}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </section>
 
-      <hr />
+      <section className="card">
+        <div className="section-heading">
+          <div>
+            <h2>Your budgets</h2>
+            <p className="muted">
+              All your configured monthly spending limits.
+            </p>
+          </div>
 
-      <section>
-        <h2>Budget List</h2>
+          <button
+            className="secondary"
+            onClick={loadData}
+            disabled={loading}
+          >
+            <span>↻</span> Refresh
+          </button>
+        </div>
 
-        <button onClick={loadData} disabled={loading}>
-          Refresh
-        </button>
-
-        {budgets.length === 0 ? (
-          <p>No budgets found.</p>
+        {loading ? (
+          <div className="empty-state">
+            <p>Loading budgets...</p>
+          </div>
+        ) : budgets.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">₹</div>
+            <h3>No budgets yet</h3>
+            <p>Create your first budget to start tracking your spending.</p>
+          </div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Amount</th>
-                <th>Month</th>
-                <th>Year</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {budgets.map((budget) => (
-                <tr key={budget.id}>
-                  <td>{budget.categoryName}</td>
-
-                  <td>
-                    ₹{budget.amount}
-                  </td>
-
-                  <td>{budget.month}</td>
-
-                  <td>{budget.year}</td>
-
-                  <td>
-                    <button
-                      onClick={() =>
-                        startEditing(budget)
-                      }
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        handleDelete(budget)
-                      }
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <div className="table-wrapper">
+            <table className="modern-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Monthly limit</th>
+                  <th>Period</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {budgets.map((budget) => (
+                  <tr key={budget.id}>
+                    <td>
+                      <div className="table-primary">
+                        <span className="category-avatar">₹</span>
+                        <strong>{budget.categoryName}</strong>
+                      </div>
+                    </td>
+
+                    <td className="amount-cell">
+                      {currency(budget.amount)}
+                    </td>
+
+                    <td>
+                      <span className="period-badge">
+                        {MONTHS[budget.month - 1]} {budget.year}
+                      </span>
+                    </td>
+
+                    <td>
+                      <div className="row-actions">
+                        <button
+                          className="secondary small-button"
+                          onClick={() => startEditing(budget)}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          className="danger small-button"
+                          onClick={() => handleDelete(budget)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>
