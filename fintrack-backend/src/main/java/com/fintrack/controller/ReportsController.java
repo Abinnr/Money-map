@@ -1,5 +1,8 @@
+
 package com.fintrack.controller;
 
+import com.fintrack.dto.BudgetReportResponse;
+import com.fintrack.dto.CategoryReportResponse;
 import com.fintrack.dto.MonthlyReportResponse;
 import com.fintrack.service.ReportsService;
 
@@ -23,8 +26,24 @@ public class ReportsController {
     @GetMapping("/monthly")
     public List<MonthlyReportResponse> getMonthlyReport(
             @RequestParam String from,
-            @RequestParam String to
-    ) {
+            @RequestParam String to) {
+
         return reportsService.getMonthlyReport(from, to);
+    }
+
+    @GetMapping("/categories")
+    public List<CategoryReportResponse> getCategoryReport(
+            @RequestParam int month,
+            @RequestParam int year) {
+
+        return reportsService.getCategoryReport(month, year);
+    }
+
+    @GetMapping("/budgets")
+    public List<BudgetReportResponse> getBudgetReport(
+            @RequestParam int month,
+            @RequestParam int year) {
+
+        return reportsService.getBudgetReport(month, year);
     }
 }

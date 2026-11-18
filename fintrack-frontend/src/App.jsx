@@ -1,15 +1,20 @@
+
 import { useState } from "react";
+
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import Transactions from "./components/Transactions";
 import Categories from "./components/Categories";
 import Budgets from "./components/Budgets";
+import Reports from "./components/Reports";
+
 import "./App.css";
 
 function App() {
   const [authenticated, setAuthenticated] = useState(
     Boolean(localStorage.getItem("fintrack_token"))
   );
+
   const [page, setPage] = useState("dashboard");
 
   function handleLogout() {
@@ -34,6 +39,7 @@ function App() {
           >
             Dashboard
           </button>
+
           <button
             className={page === "transactions" ? "nav-active" : ""}
             onClick={() => setPage("transactions")}
@@ -54,10 +60,17 @@ function App() {
           >
             Categories
           </button>
-          <button onClick={handleLogout}>Logout</button>
 
+          <button
+            className={page === "reports" ? "nav-active" : ""}
+            onClick={() => setPage("reports")}
+          >
+            Reports
+          </button>
 
-          
+          <button onClick={handleLogout}>
+            Logout
+          </button>
         </nav>
       </header>
 
@@ -67,8 +80,12 @@ function App() {
         <Transactions />
       ) : page === "categories" ? (
         <Categories />
-      ) : (
+      ) : page === "budgets" ? (
         <Budgets />
+      ) : page === "reports" ? (
+        <Reports />
+      ) : (
+        <Dashboard />
       )}
     </>
   );

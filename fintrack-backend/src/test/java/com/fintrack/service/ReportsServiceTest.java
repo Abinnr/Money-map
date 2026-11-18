@@ -4,6 +4,8 @@ import com.fintrack.dto.MonthlyReportResponse;
 import com.fintrack.entity.TransactionType;
 import com.fintrack.repository.TransactionRepository;
 import com.fintrack.repository.projection.MonthlyTransactionSummary;
+import com.fintrack.repository.BudgetRepository;
+import org.mockito.Mock;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,9 @@ class ReportsServiceTest {
 
     @Mock
     private TransactionRepository transactionRepository;
+
+    @Mock
+        private BudgetRepository budgetRepository;
 
     @InjectMocks
     private ReportsService reportsService;
