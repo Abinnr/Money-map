@@ -1379,3 +1379,28 @@ select:focus {
   }
 }
 
+
+
+/* Authentication links */
+
+.auth-link {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.auth-link:hover:not(:disabled) {
+  background: transparent;
+  text-decoration: underline;
+  transform: none;
+}
+
+.auth-link:disabled {
+  opacity: 0.5;
+}
+

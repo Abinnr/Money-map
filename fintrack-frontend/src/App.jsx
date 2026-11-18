@@ -2,11 +2,11 @@
 import { useState } from "react";
 
 import Login from "./components/Login";
+import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import Transactions from "./components/Transactions";
 import Categories from "./components/Categories";
 import Budgets from "./components/Budgets";
-import Reports from "./components/Reports";
 
 import "./App.css";
 
@@ -15,16 +15,38 @@ function App() {
     Boolean(localStorage.getItem("fintrack_token"))
   );
 
+  const [authPage, setAuthPage] = useState("login");
   const [page, setPage] = useState("dashboard");
+
+  function handleLogin() {
+    setAuthenticated(true);
+    setPage("dashboard");
+  }
+
+  function handleRegistrationSuccess() {
+    setAuthPage("login");
+  }
 
   function handleLogout() {
     localStorage.removeItem("fintrack_token");
+
     setAuthenticated(false);
+    setAuthPage("login");
     setPage("dashboard");
   }
 
   if (!authenticated) {
-    return <Login onLogin={() => setAuthenticated(true)} />;
+    return authPage === "register" ? (
+      <Register
+        onRegistrationSuccess={handleRegistrationSuccess}
+        onLoginClick={() => setAuthPage("login")}
+      />
+    ) : (
+      <Login
+        onLogin={handleLogin}
+        onRegisterClick={() => setAuthPage("register")}
+      />
+    );
   }
 
   return (
@@ -61,13 +83,6 @@ function App() {
             Categories
           </button>
 
-          <button
-            className={page === "reports" ? "nav-active" : ""}
-            onClick={() => setPage("reports")}
-          >
-            Reports
-          </button>
-
           <button onClick={handleLogout}>
             Logout
           </button>
@@ -80,12 +95,8 @@ function App() {
         <Transactions />
       ) : page === "categories" ? (
         <Categories />
-      ) : page === "budgets" ? (
-        <Budgets />
-      ) : page === "reports" ? (
-        <Reports />
       ) : (
-        <Dashboard />
+        <Budgets />
       )}
     </>
   );
