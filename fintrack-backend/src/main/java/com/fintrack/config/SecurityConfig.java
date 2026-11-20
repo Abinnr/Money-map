@@ -2,6 +2,8 @@ package com.fintrack.config;
 
 import com.fintrack.security.JwtAuthenticationFilter;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -41,6 +43,13 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(
                     SessionCreationPolicy.STATELESS
                 )
+            )
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("text/plain;charset=UTF-8");
+                    response.getWriter().write("Session expired or unauthorized. Please log in again.");
+                })
             )
 
             .authorizeHttpRequests(auth -> auth
