@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { login } from "../services/authService";
 
-function Login({ onLogin, onRegisterClick }) {
+function Login({ onLogin, onRegisterClick, notice, onClearNotice }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -12,16 +11,16 @@ function Login({ onLogin, onRegisterClick }) {
     event.preventDefault();
 
     setError("");
+    if (onClearNotice) {
+      onClearNotice();
+    }
     setLoading(true);
 
     try {
-      const token = await login(email, password);
-
-      localStorage.setItem("fintrack_token", token);
-
+      await login(email.trim(), password);
       onLogin();
-    } catch (error) {
-      setError("Invalid email or password.");
+    } catch (err) {
+      setError(err.message || "Invalid email or password.");
     } finally {
       setLoading(false);
     }
@@ -43,6 +42,10 @@ function Login({ onLogin, onRegisterClick }) {
           <p className="muted">
             Sign in to access your personal finance dashboard.
           </p>
+
+          {notice && (
+            <p className="alert">{notice}</p>
+          )}
 
           <form className="login-form" onSubmit={handleSubmit}>
             <label className="field">
@@ -90,6 +93,7 @@ function Login({ onLogin, onRegisterClick }) {
               type="button"
               className="auth-link"
               onClick={onRegisterClick}
+              disabled={loading}
             >
               Create account
             </button>

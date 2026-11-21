@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { register } from "../services/registrationService";
 
@@ -9,14 +8,20 @@ function Register({ onRegistrationSuccess, onLoginClick }) {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
 
     setError("");
-    setSuccess("");
+
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName) {
+      setError("Full name is required.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -32,22 +37,22 @@ function Register({ onRegistrationSuccess, onLoginClick }) {
 
     try {
       const message = await register(
-        name.trim(),
-        email.trim(),
+        trimmedName,
+        trimmedEmail,
         password
       );
-
-      setSuccess(message || "Registration successful.");
 
       setName("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
 
-      onRegistrationSuccess();
-    } catch (error) {
+      onRegistrationSuccess(
+        message || "Registration successful. Please log in."
+      );
+    } catch (err) {
       setError(
-        error.message || "Registration failed. Please try again."
+        err.message || "Registration failed. Please try again."
       );
     } finally {
       setLoading(false);
@@ -128,12 +133,6 @@ function Register({ onRegistrationSuccess, onLoginClick }) {
 
             {error && (
               <p className="alert alert-error">{error}</p>
-            )}
-
-            {success && (
-              <p className="alert">
-                {success}
-              </p>
             )}
 
             <button
