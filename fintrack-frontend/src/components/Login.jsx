@@ -31,7 +31,7 @@ function Login({ onLogin, onRegisterClick, notice, onClearNotice }) {
       <section className="login-panel">
         <div className="login-brand">
           <span className="brand-mark">₹</span>
-          FinTrack
+          Money Map
         </div>
 
         <div className="login-content">
@@ -40,7 +40,7 @@ function Login({ onLogin, onRegisterClick, notice, onClearNotice }) {
           <h1>Welcome back.</h1>
 
           <p className="muted">
-            Sign in to access your personal finance dashboard.
+            Sign in to access map to your personal finance dashboard.
           </p>
 
           {notice && (
@@ -115,7 +115,7 @@ function Login({ onLogin, onRegisterClick, notice, onClearNotice }) {
 
           <p>
             Keep track of your income, expenses and budgets.
-            Make informed financial decisions with FinTrack.
+            Make informed financial decisions with Money-Map.
           </p>
 
           <div className="decoration-stat">

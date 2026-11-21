@@ -138,10 +138,14 @@ function App() {
   return (
     <>
       <header className="app-header">
-        <strong>FinTrack</strong>
+        <div className="app-brand">
+          <span className="app-brand-mark">₹</span>
+          <span>MoneyMap</span>
+        </div>
 
-        <nav>
+        <nav aria-label="Primary navigation">
           <button
+            type="button"
             className={page === "dashboard" ? "nav-active" : ""}
             onClick={() => setPage("dashboard")}
           >
@@ -149,6 +153,7 @@ function App() {
           </button>
 
           <button
+            type="button"
             className={page === "transactions" ? "nav-active" : ""}
             onClick={() => setPage("transactions")}
           >
@@ -156,6 +161,7 @@ function App() {
           </button>
 
           <button
+            type="button"
             className={page === "budgets" ? "nav-active" : ""}
             onClick={() => setPage("budgets")}
           >
@@ -163,6 +169,7 @@ function App() {
           </button>
 
           <button
+            type="button"
             className={page === "categories" ? "nav-active" : ""}
             onClick={() => setPage("categories")}
           >
@@ -170,20 +177,25 @@ function App() {
           </button>
 
           <button
+            type="button"
             className={page === "reports" ? "nav-active" : ""}
             onClick={() => setPage("reports")}
           >
             Reports
           </button>
 
-          <button onClick={handleLogout}>
+          <button
+            type="button"
+            className="nav-logout"
+            onClick={handleLogout}
+          >
             Logout
           </button>
         </nav>
       </header>
 
       {page === "dashboard" ? (
-        <Dashboard />
+        <Dashboard onNavigate={setPage} />
       ) : page === "transactions" ? (
         <Transactions />
       ) : page === "categories" ? (
