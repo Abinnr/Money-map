@@ -38,10 +38,20 @@ function App() {
       );
     }
 
+    function handleStorageChange(event) {
+      if (event.key === "fintrack_token" && !event.newValue) {
+        setAuthenticated(false);
+        setAuthPage("login");
+        setPage("dashboard");
+      }
+    }
+
     window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    window.addEventListener("storage", handleStorageChange);
 
     return () => {
       window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
