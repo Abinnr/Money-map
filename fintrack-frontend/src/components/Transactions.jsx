@@ -6,16 +6,23 @@ import {
   updateTransaction,
 } from "../services/transactionService";
 import { getCategories } from "../services/categoryService";
+import ConfirmModal from "./ConfirmModal";
+import StatusAlert from "./StatusAlert";
 
 const PAGE_SIZE = 5;
 
-const initialForm = {
-  amount: "",
-  type: "EXPENSE",
-  description: "",
-  transactionDate: "",
-  categoryId: "",
-};
+const currency = (value) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+function getCurrentLocalDateTime() {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
+}
 
 function toInputDateTime(value) {
   if (!value) return "";
@@ -23,7 +30,31 @@ function toInputDateTime(value) {
 }
 
 function toApiDateTime(value) {
-  return value ? `${value}:00` : value;
+  return value && value.length === 16 ? `${value}:00` : value;
+}
+
+function formatDisplayDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function createInitialForm() {
+  return {
+    amount: "",
+    type: "EXPENSE",
+    description: "",
+    transactionDate: getCurrentLocalDateTime(),
+    categoryId: "",
+  };
 }
 
 function Transactions() {
@@ -38,24 +69,32 @@ function Transactions() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(createInitialForm);
   const [editingId, setEditingId] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
   const [categoryError, setCategoryError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const availableCategories = useMemo(() => {
-    const selectedType = form.type;
-
-    return categories.filter((category) => category.type === selectedType);
+    return categories.filter(
+      (category) =>
+        category.type === form.type &&
+        (category.isActive ?? category.active ?? true)
+    );
   }, [categories, form.type]);
 
   const filterCategories = useMemo(() => {
     return categories.filter((category) => !type || category.type === type);
   }, [categories, type]);
+
+  const activeFilterCount = [type, categoryId, from, to].filter(Boolean).length;
 
   async function loadTransactions(targetPage = page) {
     setLoading(true);
@@ -75,8 +114,8 @@ function Transactions() {
       setPage(data.page);
       setTotalPages(data.totalPages);
       setTotalElements(data.totalElements);
-    } catch {
-      setError("Failed to load transactions.");
+    } catch (err) {
+      setError(err.message || "Failed to load transactions.");
     } finally {
       setLoading(false);
     }
@@ -107,7 +146,9 @@ function Transactions() {
         setTotalPages(data.totalPages);
         setTotalElements(data.totalElements);
       } else {
-        setError("Failed to load transactions.");
+        setError(
+          transactionResult.reason?.message || "Failed to load transactions."
+        );
       }
 
       if (categoryResult.status === "fulfilled") {
@@ -135,7 +176,7 @@ function Transactions() {
   }
 
   function resetForm() {
-    setForm(initialForm);
+    setForm(createInitialForm());
     setEditingId(null);
     setFormError("");
   }
@@ -143,25 +184,43 @@ function Transactions() {
   function startEditing(transaction) {
     setEditingId(transaction.id);
     setForm({
-      amount: transaction.amount,
+      amount: String(transaction.amount),
       type: transaction.type,
       description: transaction.description || "",
       transactionDate: toInputDateTime(transaction.transactionDate),
-      categoryId: transaction.categoryId,
+      categoryId: String(transaction.categoryId),
     });
     setFormError("");
+    setSuccessMessage("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
     setFormError("");
+    setSuccessMessage("");
+
+    if (!form.amount || Number(form.amount) <= 0) {
+      setFormError("Amount must be greater than zero.");
+      return;
+    }
+
+    if (!form.categoryId) {
+      setFormError("Please select a category.");
+      return;
+    }
+
+    if (!form.transactionDate) {
+      setFormError("Transaction date and time are required.");
+      return;
+    }
+
     setSaving(true);
 
     const payload = {
       amount: Number(form.amount),
       type: form.type,
-      description: form.description || null,
+      description: form.description.trim() || null,
       transactionDate: toApiDateTime(form.transactionDate),
       categoryId: Number(form.categoryId),
     };
@@ -169,41 +228,50 @@ function Transactions() {
     try {
       if (editingId) {
         await updateTransaction(editingId, payload);
+        setSuccessMessage("Transaction updated successfully.");
       } else {
         await createTransaction(payload);
+        setSuccessMessage("Transaction added successfully.");
       }
 
+      const targetPage = editingId ? page : 0;
       resetForm();
-      await loadTransactions(editingId ? page : 0);
-
-      if (!editingId) {
-        setPage(0);
-      }
-    } catch {
-      setFormError("Failed to save transaction. Check the values and try again.");
+      await loadTransactions(targetPage);
+    } catch (err) {
+      setFormError(
+        err.message ||
+          "Failed to save transaction. Check the values and try again."
+      );
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDelete(id) {
-    const confirmed = window.confirm(
-      "Delete this transaction? This action cannot be undone from the frontend."
-    );
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
 
-    if (!confirmed) return;
-
+    setDeleting(true);
     setError("");
+    setSuccessMessage("");
 
     try {
-      await deleteTransaction(id);
+      await deleteTransaction(deleteTarget.id);
+
+      if (editingId === deleteTarget.id) {
+        resetForm();
+      }
 
       const nextPage =
         transactions.length === 1 && page > 0 ? page - 1 : page;
 
+      setDeleteTarget(null);
+      setSuccessMessage("Transaction deleted.");
       await loadTransactions(nextPage);
-    } catch {
-      setError("Failed to delete transaction.");
+    } catch (err) {
+      setError(err.message || "Failed to delete transaction.");
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -220,8 +288,6 @@ function Transactions() {
     setTo("");
     setPage(0);
 
-    // The request must use cleared values immediately rather than waiting
-    // for React state to update.
     loadTransactionsWithFilters({
       page: 0,
       type: undefined,
@@ -249,44 +315,81 @@ function Transactions() {
       setPage(data.page);
       setTotalPages(data.totalPages);
       setTotalElements(data.totalElements);
-    } catch {
-      setError("Failed to load transactions.");
+    } catch (err) {
+      setError(err.message || "Failed to load transactions.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="page">
+    <main className="page">
       <div className="page-header">
         <div>
+          <span className="eyebrow">CASH FLOW LEDGER</span>
           <h1>Transactions</h1>
-          <p className="muted">Manage your income and expenses.</p>
+          <p className="muted">
+            Record and review your personal income and expenses.
+          </p>
         </div>
-        <span className="count-badge">{totalElements} total</span>
+
+        <span className="count-badge tabular-nums">
+          {totalElements} {totalElements === 1 ? "transaction" : "transactions"}
+        </span>
       </div>
 
-      <section className="card">
-        <h2>{editingId ? "Edit Transaction" : "Add Transaction"}</h2>
+      <StatusAlert
+        type="success"
+        message={successMessage}
+        onDismiss={() => setSuccessMessage("")}
+        autoDismissMs={4000}
+      />
 
-        <form className="transaction-form" onSubmit={handleSubmit}>
-          <label>
-            Amount
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={form.amount}
-              onChange={(event) => updateForm("amount", event.target.value)}
-              required
-            />
+      <StatusAlert
+        type="error"
+        message={error}
+        onDismiss={() => setError("")}
+      />
+
+      <section className="card">
+        <div className="section-title">
+          <div className="section-icon">
+            <span>{editingId ? "✎" : "＋"}</span>
+          </div>
+          <div>
+            <h2>{editingId ? "Edit transaction" : "Add transaction"}</h2>
+            <p className="muted">
+              {editingId
+                ? "Update the selected transaction details."
+                : "Log a new income entry or expense."}
+            </p>
+          </div>
+        </div>
+
+        <form className="modern-form" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Amount</span>
+            <div className="input-with-prefix">
+              <span>₹</span>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={form.amount}
+                onChange={(event) => updateForm("amount", event.target.value)}
+                placeholder="0.00"
+                disabled={saving}
+                required
+              />
+            </div>
           </label>
 
-          <label>
-            Type
+          <label className="field">
+            <span>Type</span>
             <select
               value={form.type}
               onChange={(event) => updateForm("type", event.target.value)}
+              disabled={saving}
               required
             >
               <option value="EXPENSE">Expense</option>
@@ -294,16 +397,21 @@ function Transactions() {
             </select>
           </label>
 
-          <label>
-            Category
+          <label className="field">
+            <span>Category</span>
             <select
               value={form.categoryId}
               onChange={(event) =>
                 updateForm("categoryId", event.target.value)
               }
+              disabled={saving}
               required
             >
-              <option value="">Select category</option>
+              <option value="">
+                {availableCategories.length === 0
+                  ? `No ${form.type.toLowerCase()} categories available`
+                  : "Select category"}
+              </option>
               {availableCategories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -312,46 +420,69 @@ function Transactions() {
             </select>
           </label>
 
-          <label>
-            Transaction date
+          <label className="field">
+            <span>Date & time</span>
             <input
               type="datetime-local"
               value={form.transactionDate}
               onChange={(event) =>
                 updateForm("transactionDate", event.target.value)
               }
+              disabled={saving}
               required
             />
           </label>
 
-          <label className="full-width">
-            Description
+          <label className="field full-width">
+            <span>Description (optional)</span>
             <input
               type="text"
               value={form.description}
               onChange={(event) =>
                 updateForm("description", event.target.value)
               }
-              placeholder="Optional"
+              placeholder="e.g. Grocery run, Monthly salary, Electricity bill"
+              maxLength={255}
+              disabled={saving}
             />
           </label>
 
           {categoryError && (
-            <p className="error full-width">{categoryError}</p>
+            <div className="full-width">
+              <StatusAlert
+                type="warning"
+                message={categoryError}
+                onDismiss={() => setCategoryError("")}
+              />
+            </div>
           )}
-          {formError && <p className="error full-width">{formError}</p>}
+
+          {formError && (
+            <div className="full-width">
+              <StatusAlert
+                type="error"
+                message={formError}
+                onDismiss={() => setFormError("")}
+              />
+            </div>
+          )}
 
           <div className="form-actions full-width">
             <button type="submit" disabled={saving}>
               {saving
                 ? "Saving..."
                 : editingId
-                  ? "Update Transaction"
-                  : "Add Transaction"}
+                  ? "Update transaction"
+                  : "Add transaction"}
             </button>
 
             {editingId && (
-              <button type="button" className="secondary" onClick={resetForm}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={resetForm}
+                disabled={saving}
+              >
                 Cancel
               </button>
             )}
@@ -360,11 +491,24 @@ function Transactions() {
       </section>
 
       <section className="card">
-        <h2>Filters</h2>
+        <div className="section-heading">
+          <div>
+            <h2>Filter transactions</h2>
+            <p className="muted">
+              Narrow down records by type, category, or date range.
+            </p>
+          </div>
 
-        <form className="filter-form" onSubmit={applyFilters}>
-          <label>
-            Type
+          {activeFilterCount > 0 && (
+            <span className="count-badge">
+              {activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}
+            </span>
+          )}
+        </div>
+
+        <form className="modern-form" onSubmit={applyFilters}>
+          <label className="field">
+            <span>Type</span>
             <select
               value={type}
               onChange={(event) => {
@@ -376,20 +520,24 @@ function Transactions() {
                     (category) => String(category.id) === String(categoryId)
                   );
 
-                  if (selectedCategory && nextType && selectedCategory.type !== nextType) {
+                  if (
+                    selectedCategory &&
+                    nextType &&
+                    selectedCategory.type !== nextType
+                  ) {
                     setCategoryId("");
                   }
                 }
               }}
             >
-              <option value="">All</option>
+              <option value="">All types</option>
               <option value="EXPENSE">Expense</option>
               <option value="INCOME">Income</option>
             </select>
           </label>
 
-          <label>
-            Category
+          <label className="field">
+            <span>Category</span>
             <select
               value={categoryId}
               onChange={(event) => setCategoryId(event.target.value)}
@@ -403,8 +551,8 @@ function Transactions() {
             </select>
           </label>
 
-          <label>
-            From
+          <label className="field">
+            <span>From</span>
             <input
               type="datetime-local"
               value={from}
@@ -412,8 +560,8 @@ function Transactions() {
             />
           </label>
 
-          <label>
-            To
+          <label className="field">
+            <span>To</span>
             <input
               type="datetime-local"
               value={to}
@@ -421,10 +569,17 @@ function Transactions() {
             />
           </label>
 
-          <div className="form-actions">
-            <button type="submit">Apply Filters</button>
-            <button type="button" className="secondary" onClick={clearFilters}>
-              Clear
+          <div className="form-actions full-width">
+            <button type="submit" disabled={loading}>
+              Apply filters
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={clearFilters}
+              disabled={loading || activeFilterCount === 0}
+            >
+              Clear filters
             </button>
           </div>
         </form>
@@ -432,57 +587,112 @@ function Transactions() {
 
       <section className="card">
         <div className="section-heading">
-          <h2>Transaction List</h2>
-          <button className="secondary" onClick={() => loadTransactions(page)}>
-            Refresh
+          <div>
+            <h2>Transaction history</h2>
+            <p className="muted">
+              Showing page {totalPages === 0 ? 0 : page + 1} of {totalPages}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => loadTransactions(page)}
+            disabled={loading}
+          >
+            ↻ Refresh
           </button>
         </div>
 
-        {error && <p className="error">{error}</p>}
-
         {loading ? (
-          <p>Loading transactions...</p>
+          <div className="empty-state">
+            <div className="loading-spinner" />
+            <p>Loading transactions...</p>
+          </div>
         ) : transactions.length === 0 ? (
-          <p className="muted">No transactions found.</p>
+          <div className="empty-state">
+            <div className="empty-icon">▤</div>
+            <h3>No transactions found</h3>
+            <p>
+              {activeFilterCount > 0
+                ? "Try clearing or adjusting your active filters."
+                : "Add your first income or expense transaction above to get started."}
+            </p>
+          </div>
         ) : (
           <div className="table-wrapper">
-            <table>
+            <table className="modern-table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Type</th>
                   <th>Category</th>
+                  <th>Type</th>
                   <th>Description</th>
+                  <th>Date & time</th>
                   <th>Amount</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((transaction) => (
-                  <tr key={transaction.id}>
-                    <td>{new Date(transaction.transactionDate).toLocaleString()}</td>
-                    <td>{transaction.type}</td>
-                    <td>{transaction.categoryName}</td>
-                    <td>{transaction.description || "—"}</td>
-                    <td>₹{Number(transaction.amount).toFixed(2)}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          className="secondary"
-                          onClick={() => startEditing(transaction)}
+                {transactions.map((transaction) => {
+                  const isIncome = transaction.type === "INCOME";
+
+                  return (
+                    <tr key={transaction.id}>
+                      <td>
+                        <div className="table-primary">
+                          <span className="category-avatar">
+                            {transaction.categoryName?.charAt(0).toUpperCase() || "₹"}
+                          </span>
+                          <strong>{transaction.categoryName}</strong>
+                        </div>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`type-badge ${
+                            isIncome ? "income-badge" : "expense-badge"
+                          }`}
                         >
-                          Edit
-                        </button>
-                        <button
-                          className="danger"
-                          onClick={() => handleDelete(transaction.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {isIncome ? "Income" : "Expense"}
+                        </span>
+                      </td>
+
+                      <td>{transaction.description || "—"}</td>
+
+                      <td className="tabular-nums">
+                        {formatDisplayDate(transaction.transactionDate)}
+                      </td>
+
+                      <td
+                        className={`amount-cell ${
+                          isIncome ? "positive-text" : "negative-text"
+                        }`}
+                      >
+                        {isIncome ? "+" : "-"}
+                        {currency(transaction.amount)}
+                      </td>
+
+                      <td>
+                        <div className="row-actions">
+                          <button
+                            type="button"
+                            className="secondary small-button"
+                            onClick={() => startEditing(transaction)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="danger small-button"
+                            onClick={() => setDeleteTarget(transaction)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -491,28 +701,46 @@ function Transactions() {
         {totalPages > 0 && (
           <div className="pagination">
             <button
+              type="button"
               className="secondary"
               disabled={page === 0 || loading}
               onClick={() => loadTransactions(page - 1)}
             >
-              Previous
+              ‹ Previous
             </button>
 
-            <span>
+            <span className="tabular-nums">
               Page {page + 1} of {totalPages}
             </span>
 
             <button
+              type="button"
               className="secondary"
               disabled={page >= totalPages - 1 || loading}
               onClick={() => loadTransactions(page + 1)}
             >
-              Next
+              Next ›
             </button>
           </div>
         )}
       </section>
-    </div>
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        title="Delete transaction?"
+        message={
+          deleteTarget
+            ? `Are you sure you want to delete this ${deleteTarget.type.toLowerCase()} of ${currency(
+                deleteTarget.amount
+              )} under "${deleteTarget.categoryName}"? This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete transaction"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </main>
   );
 }
 

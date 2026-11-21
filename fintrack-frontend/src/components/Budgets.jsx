@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getBudgets,
   createBudget,
@@ -7,6 +6,9 @@ import {
   deleteBudget,
 } from "../services/budgetService";
 import { getCategories } from "../services/categoryService";
+import { getBudgetReport } from "../services/reportService";
+import ConfirmModal from "./ConfirmModal";
+import StatusAlert from "./StatusAlert";
 
 const MONTHS = [
   "January", "February", "March", "April",
@@ -23,28 +25,39 @@ const currency = (value) =>
 
 function Budgets() {
   const today = new Date();
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
 
   const [budgets, setBudgets] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [performanceMap, setPerformanceMap] = useState({});
+
+  const [viewMonth, setViewMonth] = useState(currentMonth);
+  const [viewYear, setViewYear] = useState(currentYear);
 
   const [amount, setAmount] = useState("");
-  const [month, setMonth] = useState(today.getMonth() + 1);
-  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(currentMonth);
+  const [year, setYear] = useState(currentYear);
   const [categoryId, setCategoryId] = useState("");
   const [editingId, setEditingId] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
-  async function loadData() {
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  async function loadData(targetMonth = viewMonth, targetYear = viewYear) {
     setLoading(true);
     setError("");
 
     try {
-      const [budgetData, categoryData] = await Promise.all([
+      const [budgetData, categoryData, reportData] = await Promise.all([
         getBudgets(),
         getCategories(),
+        getBudgetReport(targetMonth, targetYear),
       ]);
 
       setBudgets(budgetData || []);
@@ -56,24 +69,29 @@ function Budgets() {
             (category.isActive ?? category.active ?? true)
         )
       );
-    } catch {
-      setError("Failed to load budgets. Please try again.");
+
+      const perfByBudgetId = {};
+      (reportData || []).forEach((item) => {
+        perfByBudgetId[item.budgetId] = item;
+      });
+      setPerformanceMap(perfByBudgetId);
+    } catch (err) {
+      setError(err.message || "Failed to load budgets. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(viewMonth, viewYear);
+  }, [viewMonth, viewYear]);
 
   function resetForm() {
     setAmount("");
-    setMonth(today.getMonth() + 1);
-    setYear(today.getFullYear());
+    setMonth(viewMonth);
+    setYear(viewYear);
     setCategoryId("");
     setEditingId(null);
-    setError("");
   }
 
   function startEditing(budget) {
@@ -83,6 +101,7 @@ function Budgets() {
     setYear(budget.year);
     setCategoryId(String(budget.categoryId));
     setError("");
+    setSuccessMessage("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -95,70 +114,103 @@ function Budgets() {
     }
 
     if (!Number.isInteger(Number(year)) || Number(year) < 2000) {
-      setError("Please enter a valid year.");
+      setError("Please enter a valid year (2000 or later).");
       return;
     }
 
     if (!categoryId) {
-      setError("Please select a category.");
+      setError("Please select an expense category.");
       return;
     }
 
     setSaving(true);
     setError("");
+    setSuccessMessage("");
+
+    const targetMonth = Number(month);
+    const targetYear = Number(year);
 
     try {
       if (editingId === null) {
         await createBudget(
           Number(amount),
-          Number(month),
-          Number(year),
+          targetMonth,
+          targetYear,
           Number(categoryId)
         );
+        setSuccessMessage("Monthly budget created successfully.");
       } else {
         await updateBudget(
           editingId,
           Number(amount),
-          Number(month),
-          Number(year),
+          targetMonth,
+          targetYear,
           Number(categoryId)
         );
+        setSuccessMessage("Monthly budget updated successfully.");
       }
 
       resetForm();
-      await loadData();
-    } catch {
+      setViewMonth(targetMonth);
+      setViewYear(targetYear);
+      await loadData(targetMonth, targetYear);
+    } catch (err) {
       setError(
-        editingId === null
-          ? "Failed to create budget."
-          : "Failed to update budget."
+        err.message ||
+          (editingId === null
+            ? "Failed to create budget."
+            : "Failed to update budget.")
       );
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDelete(budget) {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete the budget for "${budget.categoryName}"?`
-    );
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
 
-    if (!confirmed) return;
-
+    setDeleting(true);
     setError("");
+    setSuccessMessage("");
 
     try {
-      await deleteBudget(budget.id);
+      await deleteBudget(deleteTarget.id);
 
-      if (editingId === budget.id) {
+      if (editingId === deleteTarget.id) {
         resetForm();
       }
 
-      await loadData();
-    } catch {
-      setError("Failed to delete budget.");
+      const categoryName = deleteTarget.categoryName;
+      setDeleteTarget(null);
+      setSuccessMessage(`Budget for "${categoryName}" deleted.`);
+      await loadData(viewMonth, viewYear);
+    } catch (err) {
+      setError(err.message || "Failed to delete budget.");
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
     }
   }
+
+  const periodBudgets = useMemo(() => {
+    return budgets.filter(
+      (budget) =>
+        Number(budget.month) === Number(viewMonth) &&
+        Number(budget.year) === Number(viewYear)
+    );
+  }, [budgets, viewMonth, viewYear]);
+
+  const totalBudgetLimit = periodBudgets.reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0
+  );
+
+  const totalActualSpent = periodBudgets.reduce((sum, item) => {
+    const perf = performanceMap[item.id];
+    return sum + Number(perf?.actualAmount || 0);
+  }, 0);
+
+  const totalRemaining = totalBudgetLimit - totalActualSpent;
 
   return (
     <main className="page">
@@ -167,30 +219,81 @@ function Budgets() {
           <span className="eyebrow">FINANCIAL PLANNING</span>
           <h1>Budgets</h1>
           <p className="muted">
-            Plan your spending and stay in control of your money.
+            Set category spending caps and monitor utilization in real time.
           </p>
         </div>
 
-        <span className="count-badge">
-          {budgets.length} budgets
+        <span className="count-badge tabular-nums">
+          {periodBudgets.length} {periodBudgets.length === 1 ? "budget" : "budgets"} in{" "}
+          {MONTHS[viewMonth - 1]} {viewYear}
         </span>
       </div>
 
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
+      <StatusAlert
+        type="success"
+        message={successMessage}
+        onDismiss={() => setSuccessMessage("")}
+        autoDismissMs={4000}
+      />
+
+      <StatusAlert
+        type="error"
+        message={error}
+        onDismiss={() => setError("")}
+      />
+
+      <div className="stats-grid stats-grid-three">
+        <div className="stat-card">
+          <div className="stat-top">
+            <span className="stat-label">Total planned budget</span>
+            <span className="stat-icon balance-icon">₹</span>
+          </div>
+          <strong className="stat-value">{currency(totalBudgetLimit)}</strong>
+          <span className="stat-description">
+            For {MONTHS[viewMonth - 1]} {viewYear}
+          </span>
         </div>
-      )}
+
+        <div className="stat-card">
+          <div className="stat-top">
+            <span className="stat-label">Actual spending</span>
+            <span className="stat-icon expense-icon">↙</span>
+          </div>
+          <strong className="stat-value negative-text">
+            {currency(totalActualSpent)}
+          </strong>
+          <span className="stat-description">
+            Across budgeted categories
+          </span>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-top">
+            <span className="stat-label">Remaining allowance</span>
+            <span className="stat-icon income-icon">✓</span>
+          </div>
+          <strong
+            className={`stat-value ${
+              totalRemaining < 0 ? "negative-text" : "positive-text"
+            }`}
+          >
+            {currency(totalRemaining)}
+          </strong>
+          <span className="stat-description">
+            {totalRemaining < 0 ? "Over total budget" : "Available to spend"}
+          </span>
+        </div>
+      </div>
 
       <section className="card">
         <div className="section-title">
           <div className="section-icon">
-            <span>₹</span>
+            <span>{editingId === null ? "₹" : "✎"}</span>
           </div>
           <div>
             <h2>{editingId === null ? "Create a budget" : "Edit budget"}</h2>
             <p className="muted">
-              Set a monthly spending limit for a category.
+              Set a monthly spending limit for an expense category.
             </p>
           </div>
         </div>
@@ -214,14 +317,18 @@ function Budgets() {
           </label>
 
           <label className="field">
-            <span>Category</span>
+            <span>Expense category</span>
             <select
               value={categoryId}
               onChange={(event) => setCategoryId(event.target.value)}
               disabled={saving}
               required
             >
-              <option value="">Select expense category</option>
+              <option value="">
+                {categories.length === 0
+                  ? "No expense categories available"
+                  : "Select expense category"}
+              </option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -270,7 +377,10 @@ function Budgets() {
               <button
                 type="button"
                 className="secondary"
-                onClick={resetForm}
+                onClick={() => {
+                  resetForm();
+                  setError("");
+                }}
                 disabled={saving}
               >
                 Cancel
@@ -283,87 +393,198 @@ function Budgets() {
       <section className="card">
         <div className="section-heading">
           <div>
-            <h2>Your budgets</h2>
+            <h2>
+              Budgets for {MONTHS[viewMonth - 1]} {viewYear}
+            </h2>
             <p className="muted">
-              All your configured monthly spending limits.
+              Track progress and overspending warnings by category.
             </p>
           </div>
 
-          <button
-            className="secondary"
-            onClick={loadData}
-            disabled={loading}
-          >
-            <span>↻</span> Refresh
-          </button>
+          <div className="page-header-actions">
+            <select
+              aria-label="Filter budgets by month"
+              value={viewMonth}
+              onChange={(event) => setViewMonth(Number(event.target.value))}
+            >
+              {MONTHS.map((name, index) => (
+                <option key={name} value={index + 1}>
+                  {name}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              aria-label="Filter budgets by year"
+              min="2000"
+              value={viewYear}
+              onChange={(event) => setViewYear(Number(event.target.value))}
+              style={{ width: "100px" }}
+            />
+
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => loadData(viewMonth, viewYear)}
+              disabled={loading}
+            >
+              ↻ Refresh
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <div className="empty-state">
+            <div className="loading-spinner" />
             <p>Loading budgets...</p>
           </div>
-        ) : budgets.length === 0 ? (
+        ) : periodBudgets.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">₹</div>
-            <h3>No budgets yet</h3>
-            <p>Create your first budget to start tracking your spending.</p>
+            <h3>No budgets for {MONTHS[viewMonth - 1]} {viewYear}</h3>
+            <p>
+              Create a budget above for this period or switch the month/year selector.
+            </p>
           </div>
         ) : (
-          <div className="table-wrapper">
-            <table className="modern-table">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>Monthly limit</th>
-                  <th>Period</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
+          <div className="budget-cards-grid">
+            {periodBudgets.map((budget) => {
+              const perf = performanceMap[budget.id];
+              const actual = Number(perf?.actualAmount || 0);
+              const limit = Number(budget.amount || 0);
+              const remaining =
+                perf?.remainingAmount !== undefined
+                  ? Number(perf.remainingAmount)
+                  : limit - actual;
+              const utilization =
+                perf?.utilizationPercentage !== undefined
+                  ? Number(perf.utilizationPercentage)
+                  : limit > 0
+                    ? (actual / limit) * 100
+                    : 0;
 
-              <tbody>
-                {budgets.map((budget) => (
-                  <tr key={budget.id}>
-                    <td>
-                      <div className="table-primary">
-                        <span className="category-avatar">₹</span>
-                        <strong>{budget.categoryName}</strong>
-                      </div>
-                    </td>
+              const isOverspent = utilization > 100;
+              const isNearLimit = !isOverspent && utilization >= 80;
 
-                    <td className="amount-cell">
-                      {currency(budget.amount)}
-                    </td>
-
-                    <td>
-                      <span className="period-badge">
-                        {MONTHS[budget.month - 1]} {budget.year}
+              return (
+                <article className="budget-card-item" key={budget.id}>
+                  <div className="budget-card-header">
+                    <div className="table-primary">
+                      <span className="category-avatar">
+                        {budget.categoryName?.charAt(0).toUpperCase() || "₹"}
                       </span>
-                    </td>
-
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          className="secondary small-button"
-                          onClick={() => startEditing(budget)}
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          className="danger small-button"
-                          onClick={() => handleDelete(budget)}
-                        >
-                          Delete
-                        </button>
+                      <div>
+                        <strong>{budget.categoryName}</strong>
+                        <div className="muted" style={{ fontSize: "12px" }}>
+                          {MONTHS[budget.month - 1]} {budget.year}
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+
+                    <span
+                      className={`type-badge ${
+                        isOverspent
+                          ? "expense-badge"
+                          : isNearLimit
+                            ? "warning-badge"
+                            : "income-badge"
+                      }`}
+                    >
+                      {isOverspent
+                        ? "Overspent"
+                        : isNearLimit
+                          ? "Near Limit"
+                          : "On Track"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="breakdown-heading">
+                      <span className="muted">
+                        Spent:{" "}
+                        <strong style={{ color: "var(--text-h)" }}>
+                          {currency(actual)}
+                        </strong>{" "}
+                        of {currency(limit)}
+                      </span>
+                      <strong
+                        className={`tabular-nums ${
+                          isOverspent ? "negative-text" : "positive-text"
+                        }`}
+                      >
+                        {utilization.toFixed(1)}%
+                      </strong>
+                    </div>
+
+                    <div className="progress-track">
+                      <div
+                        className={`progress-fill ${
+                          isOverspent
+                            ? "progress-danger"
+                            : isNearLimit
+                              ? "progress-warning"
+                              : "progress-budget"
+                        }`}
+                        style={{ width: `${Math.min(utilization, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="budget-card-footer">
+                    <span
+                      className={`tabular-nums ${
+                        remaining < 0 ? "negative-text" : "muted"
+                      }`}
+                      style={{ fontSize: "12.5px", fontWeight: 600 }}
+                    >
+                      {remaining < 0
+                        ? `Overspent by ${currency(Math.abs(remaining))}`
+                        : `Remaining: ${currency(remaining)}`}
+                    </span>
+
+                    <div className="row-actions">
+                      <button
+                        type="button"
+                        className="secondary small-button"
+                        onClick={() => startEditing(budget)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger small-button"
+                        onClick={() => setDeleteTarget(budget)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        title="Delete budget?"
+        message={
+          deleteTarget
+            ? `Are you sure you want to delete the ${MONTHS[deleteTarget.month - 1]} ${
+                deleteTarget.year
+              } budget of ${currency(deleteTarget.amount)} for "${
+                deleteTarget.categoryName
+              }"?`
+            : ""
+        }
+        confirmLabel="Delete budget"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </main>
   );
 }

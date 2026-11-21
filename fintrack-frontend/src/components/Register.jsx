@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { register } from "../services/registrationService";
+import StatusAlert from "./StatusAlert";
 
 function Register({ onRegistrationSuccess, onLoginClick }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const passwordsMismatch =
+    confirmPassword.length > 0 && password !== confirmPassword;
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -64,7 +69,7 @@ function Register({ onRegistrationSuccess, onLoginClick }) {
       <section className="login-panel">
         <div className="login-brand">
           <span className="brand-mark">₹</span>
-          FinTrack
+          MoneyMap
         </div>
 
         <div className="login-content">
@@ -73,18 +78,19 @@ function Register({ onRegistrationSuccess, onLoginClick }) {
           <h1>Create your account</h1>
 
           <p className="muted">
-            Start managing your income, expenses and financial goals
+            Start managing your income, expenses, and financial goals
             in one place.
           </p>
 
           <form className="login-form" onSubmit={handleSubmit}>
             <label className="field">
-              Full name
+              <span>Full name</span>
               <input
                 type="text"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Enter your name"
+                autoComplete="name"
                 required
                 maxLength={100}
                 disabled={loading}
@@ -92,48 +98,76 @@ function Register({ onRegistrationSuccess, onLoginClick }) {
             </label>
 
             <label className="field">
-              Email address
+              <span>Email address</span>
               <input
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
                 required
                 disabled={loading}
               />
             </label>
 
             <label className="field">
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="At least 8 characters"
-                minLength={8}
-                required
-                disabled={loading}
-              />
+              <span>Password</span>
+              <div className="password-input-wrap">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="At least 8 characters"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                  disabled={loading}
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  disabled={loading}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+              <span className="muted" style={{ fontSize: "12px" }}>
+                Minimum 8 characters.
+              </span>
             </label>
 
             <label className="field">
-              Confirm password
+              <span>Confirm password</span>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(event) =>
                   setConfirmPassword(event.target.value)
                 }
                 placeholder="Re-enter your password"
+                autoComplete="new-password"
                 minLength={8}
                 required
                 disabled={loading}
               />
+              {passwordsMismatch && (
+                <span
+                  className="negative-text"
+                  style={{ fontSize: "12px", fontWeight: 600 }}
+                >
+                  Passwords do not match yet.
+                </span>
+              )}
             </label>
 
-            {error && (
-              <p className="alert alert-error">{error}</p>
-            )}
+            <StatusAlert
+              type="error"
+              message={error}
+              onDismiss={() => setError("")}
+            />
 
             <button
               type="submit"
@@ -180,7 +214,7 @@ function Register({ onRegistrationSuccess, onLoginClick }) {
 
             <div>
               <strong>One place for your finances</strong>
-              <span>Track, plan and manage your money.</span>
+              <span>Track, plan, and manage your money.</span>
             </div>
           </div>
         </div>

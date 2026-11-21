@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 
 import {
@@ -22,20 +21,22 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import StatusAlert from "./StatusAlert";
 
 const COLORS = [
-  "#6366f1",
-  "#06b6d4",
-  "#f59e0b",
-  "#10b981",
-  "#ec4899",
-  "#8b5cf6",
-  "#f97316",
-  "#64748b",
+  "#245b45",
+  "#23845a",
+  "#d97706",
+  "#0284c7",
+  "#c44d4d",
+  "#4f772d",
+  "#6b7280",
+  "#0f766e",
 ];
 
 function getCurrentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function getPreviousMonth(month, offset) {
@@ -73,17 +74,16 @@ function formatMonthLabel(item) {
     item.month - 1
   ).toLocaleDateString("en-IN", {
     month: "short",
+    year: "2-digit",
   });
 }
 
 function Reports() {
   const currentMonth = getCurrentMonth();
 
-  const [from, setFrom] = useState(
-    getPreviousMonth(currentMonth, 5)
-  );
-
+  const [from, setFrom] = useState(getPreviousMonth(currentMonth, 5));
   const [to, setTo] = useState(currentMonth);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const [monthlyData, setMonthlyData] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
@@ -92,12 +92,16 @@ function Reports() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const isValidRange = Boolean(from && to && from <= to);
 
   const selectedYear = Number(selectedMonth.split("-")[0]);
   const selectedMonthNumber = Number(selectedMonth.split("-")[1]);
 
   useEffect(() => {
+    if (!isValidRange || !selectedMonth) {
+      return;
+    }
+
     let cancelled = false;
 
     async function loadReports() {
@@ -105,27 +109,17 @@ function Reports() {
       setError("");
 
       try {
-        const [
-          monthly,
-          categories,
-          budgets,
-        ] = await Promise.all([
+        const [monthly, categories, budgets] = await Promise.all([
           getMonthlyReport(from, to),
-          getCategoryReport(
-            selectedMonthNumber,
-            selectedYear
-          ),
-          getBudgetReport(
-            selectedMonthNumber,
-            selectedYear
-          ),
+          getCategoryReport(selectedMonthNumber, selectedYear),
+          getBudgetReport(selectedMonthNumber, selectedYear),
         ]);
 
         if (cancelled) return;
 
-        setMonthlyData(monthly);
-        setCategoryData(categories);
-        setBudgetData(budgets);
+        setMonthlyData(monthly || []);
+        setCategoryData(categories || []);
+        setBudgetData(budgets || []);
       } catch (err) {
         if (!cancelled) {
           setError(err.message || "Unable to load reports.");
@@ -142,7 +136,7 @@ function Reports() {
     return () => {
       cancelled = true;
     };
-  }, [from, to, selectedMonthNumber, selectedYear]);
+  }, [from, to, selectedMonthNumber, selectedYear, selectedMonth, isValidRange]);
 
   const totalIncome = monthlyData.reduce(
     (sum, item) => sum + Number(item.income || 0),
@@ -169,19 +163,18 @@ function Reports() {
     0
   );
 
-  const handleFromChange = (value) => {
-    setFrom(value);
-  };
+  function applyPreset(monthsBack) {
+    const latest = getCurrentMonth();
+    setFrom(getPreviousMonth(latest, monthsBack));
+    setTo(latest);
+  }
 
-  const handleToChange = (value) => {
-    setTo(value);
-  };
-
-  const handleMonthChange = (value) => {
-    setSelectedMonth(value);
-  };
-
-  const isValidRange = from && to && from <= to;
+  function applyYearToDate() {
+    const latest = getCurrentMonth();
+    const year = latest.split("-")[0];
+    setFrom(`${year}-01`);
+    setTo(latest);
+  }
 
   const monthlyChartData = monthlyData.map((item) => ({
     ...item,
@@ -189,184 +182,202 @@ function Reports() {
   }));
 
   return (
-    <div className="page reports-page">
-
-      {/* Page heading */}
-
+    <main className="page">
       <div className="page-header">
         <div>
+          <span className="eyebrow">ANALYTICS & INSIGHTS</span>
           <h1>Financial Reports</h1>
           <p className="muted">
-            Understand your financial performance over time.
+            Analyze income trends, category distribution, and budget adherence.
           </p>
+        </div>
+
+        <div className="filter-pills" role="group" aria-label="Quick date presets">
+          <button
+            type="button"
+            className={`filter-pill ${
+              from === getPreviousMonth(currentMonth, 2) && to === currentMonth
+                ? "active"
+                : ""
+            }`}
+            onClick={() => applyPreset(2)}
+          >
+            Last 3M
+          </button>
+          <button
+            type="button"
+            className={`filter-pill ${
+              from === getPreviousMonth(currentMonth, 5) && to === currentMonth
+                ? "active"
+                : ""
+            }`}
+            onClick={() => applyPreset(5)}
+          >
+            Last 6M
+          </button>
+          <button
+            type="button"
+            className={`filter-pill ${
+              from === `${currentMonth.split("-")[0]}-01` && to === currentMonth
+                ? "active"
+                : ""
+            }`}
+            onClick={applyYearToDate}
+          >
+            This Year
+          </button>
         </div>
       </div>
 
-      {/* Date filters */}
-
       <div className="card">
         <div className="section-heading">
-          <h2>Reporting Period</h2>
+          <div>
+            <h2>Reporting period</h2>
+            <p className="muted">
+              Select a multi-month trend window and target month for breakdowns.
+            </p>
+          </div>
         </div>
 
         <div className="report-filters">
-
-          <label>
-            From
+          <label className="field">
+            <span>Trend from</span>
             <input
               type="month"
               value={from}
               max={to || currentMonth}
-              onChange={(e) => handleFromChange(e.target.value)}
+              onChange={(e) => setFrom(e.target.value)}
             />
           </label>
 
-          <label>
-            To
+          <label className="field">
+            <span>Trend to</span>
             <input
               type="month"
               value={to}
               min={from}
               max={currentMonth}
-              onChange={(e) => handleToChange(e.target.value)}
+              onChange={(e) => setTo(e.target.value)}
             />
           </label>
 
-          <label>
-            Category and budget month
+          <label className="field">
+            <span>Category & budget month</span>
             <input
               type="month"
               value={selectedMonth}
               max={currentMonth}
-              onChange={(e) => handleMonthChange(e.target.value)}
+              onChange={(e) => setSelectedMonth(e.target.value)}
             />
           </label>
-
         </div>
 
         {!isValidRange && (
-          <p className="error">
-            Please select a valid reporting period.
-          </p>
+          <StatusAlert
+            type="error"
+            message="Please select a valid reporting period where 'From' is earlier than or equal to 'To'."
+          />
         )}
-
       </div>
 
       {loading && (
         <div className="card">
-          <p className="muted">Loading reports...</p>
+          <div className="empty-state compact-empty">
+            <div className="loading-spinner" />
+            <p>Generating financial reports...</p>
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="card">
-          <p className="error">{error}</p>
-        </div>
+        <StatusAlert
+          type="error"
+          message={error}
+          onDismiss={() => setError("")}
+        />
       )}
 
-      {!loading && !error && (
+      {!loading && !error && isValidRange && (
         <>
-
-          {/* Financial summary */}
-
           <div className="report-summary-grid">
-
             <div className="report-summary-card income-card">
-              <p>Total Income</p>
+              <p>Total Income ({formatMonth(from)} – {formatMonth(to)})</p>
               <h2>{formatCurrency(totalIncome)}</h2>
             </div>
 
             <div className="report-summary-card expense-card">
-              <p>Total Expenses</p>
+              <p>Total Expenses ({formatMonth(from)} – {formatMonth(to)})</p>
               <h2>{formatCurrency(totalExpenses)}</h2>
             </div>
 
             <div className="report-summary-card balance-card">
-              <p>Net Balance</p>
+              <p>Net Balance ({formatMonth(from)} – {formatMonth(to)})</p>
               <h2>{formatCurrency(totalBalance)}</h2>
             </div>
-
           </div>
 
-          {/* Monthly trend */}
-
-          <div className="card report-chart-card">
-
+          <div className="card">
             <div className="section-heading">
               <div>
-                <h2>Monthly Financial Trend</h2>
+                <h2>Monthly financial trend</h2>
                 <p className="muted">
-                  Income and expenses over the selected period.
+                  Income, expenses, and net balance from {formatMonth(from)} to{" "}
+                  {formatMonth(to)}.
                 </p>
               </div>
             </div>
 
             {monthlyData.length === 0 ? (
-              <p className="empty-state">
-                No monthly transaction data available.
-              </p>
+              <div className="empty-state compact-empty">
+                <p>No monthly transaction data available for this range.</p>
+              </div>
             ) : (
               <div className="chart-container">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyChartData}>
-
-                    <CartesianGrid strokeDasharray="3 3" />
-
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8e1" />
                     <XAxis dataKey="label" />
-
                     <YAxis
                       tickFormatter={(value) =>
                         `₹${value.toLocaleString("en-IN")}`
                       }
                     />
-
-                    <Tooltip
-                      formatter={(value) => formatCurrency(value)}
-                    />
-
+                    <Tooltip formatter={(value) => formatCurrency(value)} />
                     <Legend />
-
                     <Line
                       type="monotone"
                       dataKey="income"
                       name="Income"
-                      stroke="#16a34a"
+                      stroke="#23845a"
                       strokeWidth={3}
-                      activeDot={{ r: 7 }}
+                      activeDot={{ r: 6 }}
                     />
-
                     <Line
                       type="monotone"
                       dataKey="expenses"
                       name="Expenses"
-                      stroke="#dc2626"
+                      stroke="#c44d4d"
                       strokeWidth={3}
-                      activeDot={{ r: 7 }}
+                      activeDot={{ r: 6 }}
                     />
-
                     <Line
                       type="monotone"
                       dataKey="balance"
-                      name="Balance"
-                      stroke="#6366f1"
+                      name="Net Balance"
+                      stroke="#245b45"
                       strokeWidth={2}
                       strokeDasharray="5 5"
                     />
-
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             )}
-
           </div>
 
-          {/* Category spending */}
-
-          <div className="card report-chart-card">
-
+          <div className="card">
             <div className="section-heading">
               <div>
-                <h2>Category Spending</h2>
+                <h2>Category spending</h2>
                 <p className="muted">
                   Expense distribution for {formatMonth(selectedMonth)}.
                 </p>
@@ -374,15 +385,14 @@ function Reports() {
             </div>
 
             {categoryData.length === 0 ? (
-              <p className="empty-state">
-                No expense data available for this month.
-              </p>
+              <div className="empty-state compact-empty">
+                <p>No expense data available for {formatMonth(selectedMonth)}.</p>
+              </div>
             ) : (
               <>
                 <div className="chart-container">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-
                       <Pie
                         data={categoryData}
                         dataKey="amount"
@@ -390,10 +400,10 @@ function Reports() {
                         cx="50%"
                         cy="50%"
                         innerRadius={75}
-                        outerRadius={120}
+                        outerRadius={115}
                         paddingAngle={3}
                         label={({ name, percentage }) =>
-                          `${name}: ${percentage}%`
+                          `${name}: ${Number(percentage).toFixed(1)}%`
                         }
                       >
                         {categoryData.map((item, index) => (
@@ -403,39 +413,30 @@ function Reports() {
                           />
                         ))}
                       </Pie>
-
-                      <Tooltip
-                        formatter={(value) => formatCurrency(value)}
-                      />
-
+                      <Tooltip formatter={(value) => formatCurrency(value)} />
                       <Legend />
-
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="report-data-list">
                   {categoryData.map((item, index) => (
-                    <div
-                      className="report-data-row"
-                      key={item.categoryId}
-                    >
+                    <div className="report-data-row" key={item.categoryId}>
                       <span className="report-category-name">
                         <span
                           className="category-dot"
                           style={{
-                            backgroundColor:
-                              COLORS[index % COLORS.length],
+                            backgroundColor: COLORS[index % COLORS.length],
                           }}
                         />
                         {item.categoryName}
                       </span>
 
-                      <strong>
+                      <strong className="tabular-nums">
                         {formatCurrency(item.amount)}
                       </strong>
 
-                      <span className="muted">
+                      <span className="muted tabular-nums">
                         {Number(item.percentage).toFixed(2)}%
                       </span>
                     </div>
@@ -443,16 +444,12 @@ function Reports() {
                 </div>
               </>
             )}
-
           </div>
 
-          {/* Budget performance */}
-
-          <div className="card report-chart-card">
-
+          <div className="card">
             <div className="section-heading">
               <div>
-                <h2>Budget vs Actual</h2>
+                <h2>Budget vs actual</h2>
                 <p className="muted">
                   Budget performance for {formatMonth(selectedMonth)}.
                 </p>
@@ -460,9 +457,9 @@ function Reports() {
             </div>
 
             {budgetData.length === 0 ? (
-              <p className="empty-state">
-                No budgets configured for this month.
-              </p>
+              <div className="empty-state compact-empty">
+                <p>No budgets configured for {formatMonth(selectedMonth)}.</p>
+              </div>
             ) : (
               <>
                 <div className="budget-summary">
@@ -502,40 +499,32 @@ function Reports() {
                         bottom: 10,
                       }}
                     >
-
-                      <CartesianGrid strokeDasharray="3 3" />
-
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8e1" />
                       <XAxis
                         type="number"
                         tickFormatter={(value) =>
                           `₹${value.toLocaleString("en-IN")}`
                         }
                       />
-
                       <YAxis
                         type="category"
                         dataKey="categoryName"
-                        width={100}
+                        width={110}
                       />
-
-                      <Tooltip
-                        formatter={(value) => formatCurrency(value)}
-                      />
-
+                      <Tooltip formatter={(value) => formatCurrency(value)} />
                       <Legend />
-
                       <Bar
                         dataKey="budgetAmount"
                         name="Budget"
-                        fill="#6366f1"
+                        fill="#245b45"
+                        radius={[0, 6, 6, 0]}
                       />
-
                       <Bar
                         dataKey="actualAmount"
                         name="Actual Spending"
-                        fill="#f59e0b"
+                        fill="#d97706"
+                        radius={[0, 6, 6, 0]}
                       />
-
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -545,7 +534,6 @@ function Reports() {
                     const utilization = Number(
                       item.utilizationPercentage || 0
                     );
-
                     const isOverspent = utilization > 100;
 
                     return (
@@ -557,11 +545,11 @@ function Reports() {
                           <strong>{item.categoryName}</strong>
 
                           <span
-                            className={
+                            className={`tabular-nums ${
                               isOverspent
                                 ? "negative-value"
                                 : "positive-value"
-                            }
+                            }`}
                           >
                             {utilization.toFixed(2)}% used
                           </span>
@@ -578,7 +566,7 @@ function Reports() {
                           />
                         </div>
 
-                        <div className="budget-detail-values">
+                        <div className="budget-detail-values tabular-nums">
                           <span>
                             Spent: {formatCurrency(item.actualAmount)}
                           </span>
@@ -588,11 +576,11 @@ function Reports() {
                           </span>
                         </div>
 
-                        <p className={
-                          isOverspent
-                            ? "negative-value"
-                            : "muted"
-                        }>
+                        <p
+                          className={`tabular-nums ${
+                            isOverspent ? "negative-value" : "muted"
+                          }`}
+                        >
                           {isOverspent
                             ? `Overspent by ${formatCurrency(
                                 Math.abs(Number(item.remainingAmount))
@@ -601,20 +589,16 @@ function Reports() {
                                 item.remainingAmount
                               )}`}
                         </p>
-
                       </div>
                     );
                   })}
                 </div>
               </>
             )}
-
           </div>
-
         </>
       )}
-
-    </div>
+    </main>
   );
 }
 

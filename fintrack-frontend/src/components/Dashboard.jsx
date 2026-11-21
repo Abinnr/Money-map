@@ -1,6 +1,6 @@
-
 import { useEffect, useState } from "react";
 import { getDashboard } from "../services/dashboardService";
+import StatusAlert from "./StatusAlert";
 
 const currency = (value) =>
   new Intl.NumberFormat("en-IN", {
@@ -15,11 +15,12 @@ const MONTHS = [
   "September", "October", "November", "December",
 ];
 
-function Dashboard() {
+function Dashboard({ onNavigate }) {
   const today = new Date();
 
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [year, setYear] = useState(today.getFullYear());
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,9 +39,11 @@ function Dashboard() {
         if (!cancelled) {
           setDashboard(data);
         }
-      } catch {
+      } catch (err) {
         if (!cancelled) {
-          setError("Failed to load dashboard. Please try again.");
+          setError(
+            err.message || "Failed to load dashboard. Please try again."
+          );
         }
       } finally {
         if (!cancelled) {
@@ -54,7 +57,7 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [month, year]);
+  }, [month, year, reloadKey]);
 
   function goToPreviousMonth() {
     if (month === 1) {
@@ -78,6 +81,7 @@ function Dashboard() {
     return (
       <main className="page">
         <div className="empty-state">
+          <div className="loading-spinner" />
           <p>Preparing your financial overview...</p>
         </div>
       </main>
@@ -87,11 +91,15 @@ function Dashboard() {
   if (error && !dashboard) {
     return (
       <main className="page">
-        <div className="alert alert-error">{error}</div>
-        <button onClick={() => {
-          setDashboard(null);
-          setMonth((current) => current);
-        }}>
+        <StatusAlert
+          type="error"
+          message={error}
+          onDismiss={() => setError("")}
+        />
+        <button
+          type="button"
+          onClick={() => setReloadKey((current) => current + 1)}
+        >
           Try again
         </button>
       </main>
@@ -109,44 +117,63 @@ function Dashboard() {
   }
 
   const isPositiveBalance = Number(dashboard.balance) >= 0;
+  const totalCategorySpending = dashboard.categoryBreakdown.reduce(
+    (total, item) => total + Number(item.amount || 0),
+    0
+  );
 
   return (
     <main className="page">
-      <div className="page-header dashboard-header">
+      <div className="page-header">
         <div>
           <span className="eyebrow">YOUR FINANCIAL OVERVIEW</span>
           <h1>Dashboard</h1>
           <p className="muted">
-            Here's how your money is moving.
+            Here's how your money is moving for {MONTHS[month - 1]} {year}.
           </p>
         </div>
 
-        <div className="month-selector">
-          <button
-            className="secondary icon-button"
-            onClick={goToPreviousMonth}
-            aria-label="Previous month"
-          >
-            ‹
-          </button>
+        <div className="page-header-actions">
+          <div className="month-selector">
+            <button
+              type="button"
+              className="secondary icon-button"
+              onClick={goToPreviousMonth}
+              aria-label="Previous month"
+            >
+              ‹
+            </button>
 
-          <strong>
-            {MONTHS[month - 1]} {year}
-          </strong>
+            <strong className="tabular-nums">
+              {MONTHS[month - 1]} {year}
+            </strong>
 
-          <button
-            className="secondary icon-button"
-            onClick={goToNextMonth}
-            aria-label="Next month"
-          >
-            ›
-          </button>
+            <button
+              type="button"
+              className="secondary icon-button"
+              onClick={goToNextMonth}
+              aria-label="Next month"
+            >
+              ›
+            </button>
+          </div>
+
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate("transactions")}
+            >
+              + Add transaction
+            </button>
+          )}
         </div>
       </div>
 
-      {error && (
-        <div className="alert alert-error">{error}</div>
-      )}
+      <StatusAlert
+        type="error"
+        message={error}
+        onDismiss={() => setError("")}
+      />
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -215,6 +242,16 @@ function Dashboard() {
                 Where your money is going.
               </p>
             </div>
+
+            {onNavigate && (
+              <button
+                type="button"
+                className="secondary small-button"
+                onClick={() => onNavigate("reports")}
+              >
+                View reports
+              </button>
+            )}
           </div>
 
           {dashboard.categoryBreakdown.length === 0 ? (
@@ -223,41 +260,35 @@ function Dashboard() {
             </div>
           ) : (
             <div className="breakdown-list">
-              {dashboard.categoryBreakdown.map((category, index) => (
-                <div className="breakdown-item" key={category.categoryId}>
-                  <div className="breakdown-heading">
-                    <div className="table-primary">
-                      <span className="category-avatar">
-                        {category.categoryName?.charAt(0).toUpperCase()}
-                      </span>
-                      <strong>{category.categoryName}</strong>
-                    </div>
-                    <strong>{currency(category.amount)}</strong>
-                  </div>
+              {dashboard.categoryBreakdown.map((category) => {
+                const share =
+                  totalCategorySpending > 0
+                    ? (Number(category.amount) / totalCategorySpending) * 100
+                    : 0;
 
-                  <div className="progress-track">
-                    <div
-                      className="progress-fill category-progress"
-                      style={{
-                        width: `${
-                          dashboard.categoryBreakdown.reduce(
-                            (total, item) => total + Number(item.amount || 0),
-                            0
-                          ) > 0
-                            ? (Number(category.amount) /
-                                dashboard.categoryBreakdown.reduce(
-                                  (total, item) =>
-                                    total + Number(item.amount || 0),
-                                  0
-                                )) *
-                              100
-                            : 0
-                        }%`,
-                      }}
-                    />
+                return (
+                  <div className="breakdown-item" key={category.categoryId}>
+                    <div className="breakdown-heading">
+                      <div className="table-primary">
+                        <span className="category-avatar">
+                          {category.categoryName?.charAt(0).toUpperCase()}
+                        </span>
+                        <strong>{category.categoryName}</strong>
+                      </div>
+                      <strong className="tabular-nums">
+                        {currency(category.amount)}
+                      </strong>
+                    </div>
+
+                    <div className="progress-track">
+                      <div
+                        className="progress-fill category-progress"
+                        style={{ width: `${share}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -270,6 +301,16 @@ function Dashboard() {
                 Track your spending against your limits.
               </p>
             </div>
+
+            {onNavigate && (
+              <button
+                type="button"
+                className="secondary small-button"
+                onClick={() => onNavigate("budgets")}
+              >
+                Manage budgets
+              </button>
+            )}
           </div>
 
           {dashboard.budgetVsActual.length === 0 ? (
@@ -281,35 +322,43 @@ function Dashboard() {
               {dashboard.budgetVsActual.map((budget) => {
                 const used = Number(budget.percentageUsed || 0);
                 const exceeded = used > 100;
+                const nearLimit = !exceeded && used >= 80;
 
                 return (
-                  <div className="budget-performance-item" key={budget.categoryId}>
+                  <div
+                    className="budget-performance-item"
+                    key={budget.categoryId}
+                  >
                     <div className="breakdown-heading">
                       <strong>{budget.categoryName}</strong>
-                      <span className={exceeded ? "negative-text" : "muted"}>
-                        {used.toFixed(2)}% used
+                      <span
+                        className={`tabular-nums ${
+                          exceeded ? "negative-text" : "muted"
+                        }`}
+                      >
+                        {used.toFixed(1)}% used
                       </span>
                     </div>
 
                     <div className="progress-track">
                       <div
                         className={`progress-fill ${
-                          exceeded ? "progress-danger" : "progress-budget"
+                          exceeded
+                            ? "progress-danger"
+                            : nearLimit
+                              ? "progress-warning"
+                              : "progress-budget"
                         }`}
                         style={{ width: `${Math.min(used, 100)}%` }}
                       />
                     </div>
 
-                    <div className="budget-details">
-                      <span>
-                        Spent: {currency(budget.actualAmount)}
-                      </span>
-                      <span>
-                        Limit: {currency(budget.budgetAmount)}
-                      </span>
+                    <div className="budget-details tabular-nums">
+                      <span>Spent: {currency(budget.actualAmount)}</span>
+                      <span>Limit: {currency(budget.budgetAmount)}</span>
                     </div>
 
-                    <div className="budget-remaining">
+                    <div className="budget-remaining tabular-nums">
                       <span className="muted">Remaining</span>
                       <strong
                         className={

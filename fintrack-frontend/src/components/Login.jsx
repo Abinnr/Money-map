@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { login } from "../services/authService";
+import StatusAlert from "./StatusAlert";
 
 function Login({ onLogin, onRegisterClick, notice, onClearNotice }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +33,7 @@ function Login({ onLogin, onRegisterClick, notice, onClearNotice }) {
       <section className="login-panel">
         <div className="login-brand">
           <span className="brand-mark">₹</span>
-          Money Map
+          MoneyMap
         </div>
 
         <div className="login-content">
@@ -40,50 +42,68 @@ function Login({ onLogin, onRegisterClick, notice, onClearNotice }) {
           <h1>Welcome back.</h1>
 
           <p className="muted">
-            Sign in to access map to your personal finance dashboard.
+            Sign in to access your personal finance dashboard.
           </p>
 
-          {notice && (
-            <p className="alert">{notice}</p>
-          )}
+          <StatusAlert
+            type="success"
+            message={notice}
+            onDismiss={onClearNotice}
+          />
 
           <form className="login-form" onSubmit={handleSubmit}>
             <label className="field">
-              Email address
+              <span>Email address</span>
 
               <input
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
                 required
                 disabled={loading}
               />
             </label>
 
             <label className="field">
-              Password
+              <span>Password</span>
 
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Enter your password"
-                required
-                disabled={loading}
-              />
+              <div className="password-input-wrap">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  required
+                  disabled={loading}
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  disabled={loading}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </label>
 
-            {error && (
-              <p className="alert alert-error">{error}</p>
-            )}
+            <StatusAlert
+              type="error"
+              message={error}
+              onDismiss={() => setError("")}
+            />
 
             <button
               type="submit"
               className="login-submit"
               disabled={loading}
             >
-              {loading ? "Logging in..." : "Login"}
+              {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
 
@@ -114,8 +134,8 @@ function Login({ onLogin, onRegisterClick, notice, onClearNotice }) {
           </h2>
 
           <p>
-            Keep track of your income, expenses and budgets.
-            Make informed financial decisions with Money-Map.
+            Keep track of your income, expenses, and budgets.
+            Make informed financial decisions with MoneyMap.
           </p>
 
           <div className="decoration-stat">

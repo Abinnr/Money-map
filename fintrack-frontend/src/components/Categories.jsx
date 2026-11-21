@@ -1,11 +1,12 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getCategories,
   createCategory,
   updateCategory,
   deleteCategory,
 } from "../services/categoryService";
+import ConfirmModal from "./ConfirmModal";
+import StatusAlert from "./StatusAlert";
 
 function Categories() {
   const [categories, setCategories] = useState([]);
@@ -14,9 +15,16 @@ function Categories() {
   const [type, setType] = useState("EXPENSE");
   const [editingId, setEditingId] = useState(null);
 
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   async function loadCategories() {
     setLoading(true);
@@ -25,8 +33,8 @@ function Categories() {
     try {
       const data = await getCategories();
       setCategories(data || []);
-    } catch {
-      setError("Failed to load categories. Please try again.");
+    } catch (err) {
+      setError(err.message || "Failed to load categories. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -40,7 +48,6 @@ function Categories() {
     setName("");
     setType("EXPENSE");
     setEditingId(null);
-    setError("");
   }
 
   function startEditing(category) {
@@ -48,59 +55,69 @@ function Categories() {
     setName(category.name);
     setType(category.type);
     setError("");
+    setSuccessMessage("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       setError("Category name is required.");
       return;
     }
 
     setSaving(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       if (editingId === null) {
-        await createCategory(name.trim(), type);
+        await createCategory(trimmedName, type);
+        setSuccessMessage(`Category "${trimmedName}" created.`);
       } else {
-        await updateCategory(editingId, name.trim(), type);
+        await updateCategory(editingId, trimmedName, type);
+        setSuccessMessage(`Category "${trimmedName}" updated.`);
       }
 
       resetForm();
       await loadCategories();
-    } catch {
+    } catch (err) {
       setError(
-        editingId === null
-          ? "Failed to create category."
-          : "Failed to update category."
+        err.message ||
+          (editingId === null
+            ? "Failed to create category."
+            : "Failed to update category.")
       );
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDelete(category) {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${category.name}"?`
-    );
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
 
-    if (!confirmed) return;
-
+    setDeleting(true);
     setError("");
+    setSuccessMessage("");
 
     try {
-      await deleteCategory(category.id);
+      await deleteCategory(deleteTarget.id);
 
-      if (editingId === category.id) {
+      if (editingId === deleteTarget.id) {
         resetForm();
       }
 
+      const deletedName = deleteTarget.name;
+      setDeleteTarget(null);
+      setSuccessMessage(`Category "${deletedName}" deleted.`);
       await loadCategories();
-    } catch {
-      setError("Failed to delete category.");
+    } catch (err) {
+      setError(err.message || "Failed to delete category.");
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -115,6 +132,19 @@ function Categories() {
     (category) => category.type === "EXPENSE"
   ).length;
 
+  const filteredCategories = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return categories.filter((category) => {
+      const matchesType =
+        typeFilter === "ALL" || category.type === typeFilter;
+      const matchesSearch =
+        !query || category.name.toLowerCase().includes(query);
+
+      return matchesType && matchesSearch;
+    });
+  }, [categories, typeFilter, searchQuery]);
+
   return (
     <main className="page">
       <div className="page-header">
@@ -126,32 +156,48 @@ function Categories() {
           </p>
         </div>
 
-        <span className="count-badge">
-          {categories.length} categories
+        <span className="count-badge tabular-nums">
+          {categories.length} {categories.length === 1 ? "category" : "categories"}
         </span>
       </div>
 
-      {error && (
-        <div className="alert alert-error">
-          {error}
-        </div>
-      )}
+      <StatusAlert
+        type="success"
+        message={successMessage}
+        onDismiss={() => setSuccessMessage("")}
+        autoDismissMs={4000}
+      />
+
+      <StatusAlert
+        type="error"
+        message={error}
+        onDismiss={() => setError("")}
+      />
 
       <div className="stats-grid stats-grid-three">
         <div className="stat-card">
-          <span className="stat-label">Total categories</span>
+          <div className="stat-top">
+            <span className="stat-label">Total categories</span>
+            <span className="stat-icon balance-icon">▦</span>
+          </div>
           <strong className="stat-value">{categories.length}</strong>
           <span className="stat-description">All configured categories</span>
         </div>
 
         <div className="stat-card">
-          <span className="stat-label">Income categories</span>
+          <div className="stat-top">
+            <span className="stat-label">Income categories</span>
+            <span className="stat-icon income-icon">↗</span>
+          </div>
           <strong className="stat-value positive-text">{incomeCount}</strong>
           <span className="stat-description">For tracking earnings</span>
         </div>
 
         <div className="stat-card">
-          <span className="stat-label">Expense categories</span>
+          <div className="stat-top">
+            <span className="stat-label">Expense categories</span>
+            <span className="stat-icon expense-icon">↙</span>
+          </div>
           <strong className="stat-value negative-text">{expenseCount}</strong>
           <span className="stat-description">For tracking spending</span>
         </div>
@@ -160,7 +206,7 @@ function Categories() {
       <section className="card">
         <div className="section-title">
           <div className="section-icon">
-            <span>＋</span>
+            <span>{editingId === null ? "＋" : "✎"}</span>
           </div>
           <div>
             <h2>{editingId === null ? "Create category" : "Edit category"}</h2>
@@ -177,7 +223,7 @@ function Categories() {
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Groceries"
+              placeholder="e.g. Groceries, Rent, Salary"
               disabled={saving}
               maxLength={100}
               required
@@ -209,7 +255,10 @@ function Categories() {
               <button
                 type="button"
                 className="secondary"
-                onClick={resetForm}
+                onClick={() => {
+                  resetForm();
+                  setError("");
+                }}
                 disabled={saving}
               >
                 Cancel
@@ -229,6 +278,7 @@ function Categories() {
           </div>
 
           <button
+            type="button"
             className="secondary"
             onClick={loadCategories}
             disabled={loading}
@@ -237,15 +287,68 @@ function Categories() {
           </button>
         </div>
 
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "12px",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "18px",
+          }}
+        >
+          <div className="filter-pills" role="group" aria-label="Filter by category type">
+            <button
+              type="button"
+              className={`filter-pill ${typeFilter === "ALL" ? "active" : ""}`}
+              onClick={() => setTypeFilter("ALL")}
+            >
+              All ({categories.length})
+            </button>
+            <button
+              type="button"
+              className={`filter-pill ${typeFilter === "EXPENSE" ? "active" : ""}`}
+              onClick={() => setTypeFilter("EXPENSE")}
+            >
+              Expense ({expenseCount})
+            </button>
+            <button
+              type="button"
+              className={`filter-pill ${typeFilter === "INCOME" ? "active" : ""}`}
+              onClick={() => setTypeFilter("INCOME")}
+            >
+              Income ({incomeCount})
+            </button>
+          </div>
+
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search categories..."
+            aria-label="Search categories"
+            style={{ minWidth: "220px" }}
+          />
+        </div>
+
         {loading ? (
           <div className="empty-state">
+            <div className="loading-spinner" />
             <p>Loading categories...</p>
           </div>
-        ) : categories.length === 0 ? (
+        ) : filteredCategories.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">▦</div>
-            <h3>No categories yet</h3>
-            <p>Create a category to organize your transactions.</p>
+            <h3>
+              {categories.length === 0
+                ? "No categories yet"
+                : "No matching categories"}
+            </h3>
+            <p>
+              {categories.length === 0
+                ? "Create a category above to organize your transactions."
+                : "Try clearing your search or switching the category filter."}
+            </p>
           </div>
         ) : (
           <div className="table-wrapper">
@@ -260,7 +363,7 @@ function Categories() {
               </thead>
 
               <tbody>
-                {categories.map((category) => {
+                {filteredCategories.map((category) => {
                   const active = isActive(category);
 
                   return (
@@ -300,6 +403,7 @@ function Categories() {
                       <td>
                         <div className="row-actions">
                           <button
+                            type="button"
                             className="secondary small-button"
                             onClick={() => startEditing(category)}
                             disabled={!active}
@@ -308,8 +412,9 @@ function Categories() {
                           </button>
 
                           <button
+                            type="button"
                             className="danger small-button"
-                            onClick={() => handleDelete(category)}
+                            onClick={() => setDeleteTarget(category)}
                             disabled={!active}
                           >
                             Delete
@@ -324,6 +429,20 @@ function Categories() {
           </div>
         )}
       </section>
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        title="Delete category?"
+        message={
+          deleteTarget
+            ? `Are you sure you want to delete "${deleteTarget.name}"? Existing transactions in this category will remain intact.`
+            : ""
+        }
+        confirmLabel="Delete category"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </main>
   );
 }
