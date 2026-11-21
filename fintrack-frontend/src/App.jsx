@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import Login from "./components/Login";
-import Register from "./components/Register";
+import AuthPage from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import Transactions from "./components/Transactions";
 import Categories from "./components/Categories";
@@ -23,7 +22,6 @@ function App() {
     Boolean(getValidToken())
   );
 
-  const [authPage, setAuthPage] = useState("login");
   const [authNotice, setAuthNotice] = useState("");
   const [page, setPage] = useState("dashboard");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -47,7 +45,6 @@ function App() {
     function handleUnauthorized(event) {
       clearToken();
       setAuthenticated(false);
-      setAuthPage("login");
       setPage("dashboard");
       setAccountMenuOpen(false);
       setAuthNotice(
@@ -59,7 +56,6 @@ function App() {
     function handleStorageChange(event) {
       if (event.key === "fintrack_token" && !event.newValue) {
         setAuthenticated(false);
-        setAuthPage("login");
         setPage("dashboard");
         setAccountMenuOpen(false);
       }
@@ -82,7 +78,6 @@ function App() {
     const token = getValidToken();
     if (!token) {
       setAuthenticated(false);
-      setAuthPage("login");
       return;
     }
 
@@ -95,7 +90,6 @@ function App() {
     if (remainingMs <= 0) {
       clearToken();
       setAuthenticated(false);
-      setAuthPage("login");
       setAuthNotice("Your session has expired. Please log in again.");
       return;
     }
@@ -103,7 +97,6 @@ function App() {
     const expiryTimer = window.setTimeout(() => {
       clearToken();
       setAuthenticated(false);
-      setAuthPage("login");
       setPage("dashboard");
       setAccountMenuOpen(false);
       setAuthNotice("Your session has expired. Please log in again.");
@@ -156,38 +149,20 @@ function App() {
     setAccountMenuOpen(false);
   }
 
-  function handleRegistrationSuccess(message) {
-    setAuthNotice(message || "Registration successful. Please log in.");
-    setAuthPage("login");
-  }
-
   function handleLogout() {
     clearToken();
     setAuthenticated(false);
-    setAuthPage("login");
     setAuthNotice("");
     setPage("dashboard");
     setAccountMenuOpen(false);
   }
 
   if (!authenticated) {
-    return authPage === "register" ? (
-      <Register
-        onRegistrationSuccess={handleRegistrationSuccess}
-        onLoginClick={() => {
-          setAuthNotice("");
-          setAuthPage("login");
-        }}
-      />
-    ) : (
-      <Login
+    return (
+      <AuthPage
         onLogin={handleLogin}
         notice={authNotice}
         onClearNotice={() => setAuthNotice("")}
-        onRegisterClick={() => {
-          setAuthNotice("");
-          setAuthPage("register");
-        }}
       />
     );
   }
@@ -324,6 +299,7 @@ function App() {
           </div>
 
           <div className="bottom-nav-group bottom-nav-right">
+
             <button
               type="button"
               className={`bottom-nav-item ${
