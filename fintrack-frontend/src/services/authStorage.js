@@ -16,11 +16,9 @@ export function parseJwtPayload(token) {
   }
 
   try {
-    // Convert Base64URL (- and _) to standard Base64 (+ and /)
     const base64Url = parts[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
 
-    // Restore '=' padding to make length a multiple of 4
     const padded = base64.padEnd(
       base64.length + ((4 - (base64.length % 4)) % 4),
       "="
@@ -51,19 +49,19 @@ export function isTokenExpired(token, bufferSeconds = 10) {
 }
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return sessionStorage.getItem(TOKEN_KEY);
 }
 
 export function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.setItem(TOKEN_KEY, token);
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
 }
 
 /**
- * Returns a valid (non-expired) token, or clears storage and returns null.
+ * Returns a valid (non-expired) token for the current tab, or clears storage and returns null.
  */
 export function getValidToken() {
   const token = getToken();
@@ -81,7 +79,7 @@ export function getValidToken() {
 }
 
 /**
- * Clears invalid auth state and broadcasts an event so App.jsx redirects to Login.
+ * Clears invalid auth state in the current tab and broadcasts an event so App.jsx redirects to Login.
  */
 export function triggerUnauthorizedLogout(
   message = "Your session has expired. Please log in again."
