@@ -1,6 +1,7 @@
 package com.fintrack.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -10,10 +11,8 @@ import java.math.BigDecimal;
 public class UpdateBudgetRequest {
 
     @NotNull(message = "Amount is required")
-    @DecimalMin(
-            value = "0.01",
-            message = "Amount must be greater than zero"
-    )
+    @DecimalMin(value = "0.01", message = "Amount must be greater than zero")
+    @Digits(integer = 10, fraction = 2, message = "Amount must have at most 10 integer digits and 2 decimal places")
     private BigDecimal amount;
 
     @NotNull(message = "Month is required")
@@ -23,6 +22,7 @@ public class UpdateBudgetRequest {
 
     @NotNull(message = "Year is required")
     @Min(value = 2000, message = "Invalid year")
+    @Max(value = 2100, message = "Invalid year")
     private Integer year;
 
     @NotNull(message = "Category is required")
