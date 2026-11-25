@@ -9,6 +9,7 @@ import com.fintrack.repository.TransactionRepository;
 import com.fintrack.repository.projection.CategoryExpenseSummary;
 import com.fintrack.security.SecurityUtil;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -35,6 +36,7 @@ private final BudgetRepository budgetRepository;
         this.budgetRepository = budgetRepository;
     }
 
+    @Transactional(readOnly = true)
     public DashboardSummaryResponse getMonthlySummary(
             int month,
             int year) {
