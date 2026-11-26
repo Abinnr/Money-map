@@ -2,12 +2,11 @@ import {
   getValidToken,
   triggerUnauthorizedLogout,
 } from "./authStorage";
+import { extractErrorMessage } from "./errorParser";
 
-export const API_BASE_URL = "http://localhost:8080";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-/**
- * Wrapper around native fetch() for authenticated MoneyMap API endpoints.
- */
 export async function apiFetch(endpoint, options = {}) {
   const token = getValidToken();
 
@@ -38,11 +37,13 @@ export async function apiFetch(endpoint, options = {}) {
   }
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `Request failed with status ${response.status}`);
+    const message = await extractErrorMessage(
+      response,
+      `Something went wrong (error ${response.status}). Please try again.`
+    );
+    throw new Error(message);
   }
 
-  // Handle 204 No Content or empty DELETE responses safely
   if (response.status === 204) {
     return null;
   }
