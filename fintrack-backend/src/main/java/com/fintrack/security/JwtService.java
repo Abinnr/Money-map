@@ -51,15 +51,26 @@ public class JwtService {
     }
 
     public String generateToken(Long userId) {
+        return generateToken(userId, null, null);
+    }
+
+    public String generateToken(Long userId, String name, String email) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(userId.toString())
                 .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(secretKey)
-                .compact();
+                .expiration(expiryDate);
+
+        if (name != null) {
+            builder.claim("name", name);
+        }
+        if (email != null) {
+            builder.claim("email", email);
+        }
+
+        return builder.signWith(secretKey).compact();
     }
 
     public Long extractUserId(String token) {

@@ -30,14 +30,16 @@ function App() {
 
   const userSummary = useMemo(() => {
     if (!authenticated) {
-      return { email: "", initial: "U" };
+      return { name: "", email: "", initial: "U" };
     }
     const token = getValidToken();
     const payload = parseJwtPayload(token);
-    const email = payload?.sub || "Account";
+    const name = payload?.name || "MoneyMap User";
+    const email = payload?.email || "";
     return {
+      name,
       email,
-      initial: email.charAt(0).toUpperCase(),
+      initial: name.charAt(0).toUpperCase(),
     };
   }, [authenticated]);
 
@@ -193,7 +195,7 @@ function App() {
             <span className="account-trigger-avatar">
               {userSummary.initial}
             </span>
-            <span className="account-trigger-label">Account</span>
+            <span className="account-trigger-label">{userSummary.name}</span>
             <span className="account-trigger-caret" aria-hidden="true">
               {accountMenuOpen ? "▴" : "▾"}
             </span>
@@ -203,7 +205,12 @@ function App() {
             <div className="account-popup" role="menu">
               <div className="account-popup-header">
                 <span className="account-popup-eyebrow">SIGNED IN AS</span>
-                <strong title={userSummary.email}>{userSummary.email}</strong>
+                <strong title={userSummary.name}>{userSummary.name}</strong>
+                {userSummary.email && (
+                  <span className="muted" style={{ fontSize: "12px" }}>
+                    {userSummary.email}
+                  </span>
+                )}
               </div>
 
               <div className="account-popup-divider" />

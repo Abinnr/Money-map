@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../services/apiClient";
 import { getValidToken, parseJwtPayload } from "../services/authStorage";
 import ConfirmModal from "./ConfirmModal";
 
 function Account({ onLogout, onNavigate }) {
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [profile, setProfile] = useState(null);
 
   const sessionInfo = useMemo(() => {
     const token = getValidToken();
@@ -11,13 +13,12 @@ function Account({ onLogout, onNavigate }) {
 
     if (!payload) {
       return {
-        email: "Signed-in User",
-        initial: "U",
+        name: "Signed-in User",
+        email: "",
         expiresAt: null,
       };
     }
 
-    const email = payload.sub || "Signed-in User";
     const expiresAt =
       typeof payload.exp === "number"
         ? new Date(payload.exp * 1000).toLocaleString("en-IN", {
@@ -30,46 +31,67 @@ function Account({ onLogout, onNavigate }) {
         : null;
 
     return {
-      email,
-      initial: email.charAt(0).toUpperCase(),
+      name: payload.name || "Signed-in User",
+      email: payload.email || "",
       expiresAt,
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch("/api/users/me")
+      .then((data) => {
+        if (!cancelled && data) {
+          setProfile(data);
+        }
+      })
+      .catch(() => {
+        // Fallback to decoded JWT claims if offline
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const displayName = profile?.name || sessionInfo.name;
+  const displayEmail = profile?.email || sessionInfo.email;
+  const displayInitial = displayName.charAt(0).toUpperCase();
+
   return (
-    <main className="page">
-      <div className="page-header">
-        <div>
-          <span className="eyebrow">USER PROFILE & SESSION</span>
-          <h1>Account</h1>
-          <p className="muted">
-            Manage your profile details, workspace shortcuts, and active session.
-          </p>
-        </div>
-
-        <span className="status-badge status-active">
-          <span className="status-dot" />
-          Active session
-        </span>
-      </div>
-
-      <section className="card">
-        <div className="account-profile-row">
-          <div className="account-avatar-lg">{sessionInfo.initial}</div>
-
-          <div className="account-profile-details">
-            <h2>{sessionInfo.email}</h2>
+      <main className="page">
+        <div className="page-header">
+          <div>
+            <span className="eyebrow">USER PROFILE & SESSION</span>
+            <h1>Account</h1>
             <p className="muted">
-              Personal Finance Workspace · Currency: Indian Rupee (₹ INR)
+              Manage your profile details, workspace shortcuts, and active session.
             </p>
-            {sessionInfo.expiresAt && (
-              <span className="count-badge tabular-nums">
-                Session valid until {sessionInfo.expiresAt}
-              </span>
-            )}
           </div>
+
+          <span className="status-badge status-active">
+            <span className="status-dot" />
+            Active session
+          </span>
         </div>
-      </section>
+
+        <section className="card">
+          <div className="account-profile-row">
+            <div className="account-avatar-lg">{displayInitial}</div>
+
+            <div className="account-profile-details">
+              <h2>{displayName}</h2>
+              {displayEmail && <p className="muted">{displayEmail}</p>}
+              <p className="muted">
+                Personal Finance Workspace · Currency: Indian Rupee (₹ INR)
+              </p>
+              {sessionInfo.expiresAt && (
+                <span className="count-badge tabular-nums">
+                  Session valid until {sessionInfo.expiresAt}
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
 
       <section className="card">
         <div className="section-heading">

@@ -66,6 +66,6 @@ public class UserService {
                 "Invalid email or password"
         );
     }
-    return jwtService.generateToken(user.getId());
+    return jwtService.generateToken(user.getId(), user.getName(), user.getEmail());
     }
 }
