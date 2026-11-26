@@ -17,7 +17,7 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "budgets",
     indexes = {
-        @Index(name = "idx_budget_user_period", columnList = "user_id, year, month, is_deleted")
+        @Index(name = "idx_budget_user_period", columnList = "user_id, budget_year, budget_month, is_deleted")
     }
 )
 public class Budget {
@@ -29,10 +29,10 @@ public class Budget {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
-    @Column(nullable = false)
+    @Column(name = "budget_month", nullable = false)
     private int month;
 
-    @Column(nullable = false)
+    @Column(name = "budget_year", nullable = false)
     private int year;
 
     @ManyToOne(fetch = FetchType.LAZY)
