@@ -83,7 +83,52 @@ function Budgets() {
   }
 
   useEffect(() => {
-    loadData(viewMonth, viewYear);
+    let cancelled = false;
+
+    async function fetchInitial() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const [budgetData, categoryData, reportData] = await Promise.all([
+          getBudgets(),
+          getCategories(),
+          getBudgetReport(viewMonth, viewYear),
+        ]);
+
+        if (cancelled) return;
+
+        setBudgets(budgetData || []);
+
+        setCategories(
+          (categoryData || []).filter(
+            (category) =>
+              category.type === "EXPENSE" &&
+              (category.isActive ?? category.active ?? true)
+          )
+        );
+
+        const perfByBudgetId = {};
+        (reportData || []).forEach((item) => {
+          perfByBudgetId[item.budgetId] = item;
+        });
+        setPerformanceMap(perfByBudgetId);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || "Failed to load budgets. Please try again.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchInitial();
+
+    return () => {
+      cancelled = true;
+    };
   }, [viewMonth, viewYear]);
 
   function resetForm() {

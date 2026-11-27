@@ -5,7 +5,9 @@ import {
 import { extractErrorMessage } from "./errorParser";
 
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  import.meta.env.VITE_API_BASE_URL != undefined
+    ? import.meta.env.VITE_API_BASE_URL
+    : "http://localhost:8080";
 
 export async function apiFetch(endpoint, options = {}) {
   const token = getValidToken();

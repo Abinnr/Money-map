@@ -41,7 +41,33 @@ function Categories() {
   }
 
   useEffect(() => {
-    loadCategories();
+    let cancelled = false;
+
+    async function fetchInitial() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await getCategories();
+        if (!cancelled) {
+          setCategories(data || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || "Failed to load categories. Please try again.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchInitial();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function resetForm() {

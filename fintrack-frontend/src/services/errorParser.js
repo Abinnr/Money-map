@@ -3,7 +3,7 @@
  * or plain-text responses, never exposing raw JSON, timestamps, or paths.
  */
 export async function extractErrorMessage(response, fallbackMessage) {
-  let rawText = "";
+  let rawText;
   try {
     rawText = await response.text();
   } catch {

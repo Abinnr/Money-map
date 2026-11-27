@@ -78,23 +78,13 @@ function App() {
     }
 
     const token = getValidToken();
-    if (!token) {
-      setAuthenticated(false);
+    const payload = token ? parseJwtPayload(token) : null;
+    if (token && (!payload || typeof payload.exp !== "number")) {
       return;
     }
 
-    const payload = parseJwtPayload(token);
-    if (!payload || typeof payload.exp !== "number") {
-      return;
-    }
-
-    const remainingMs = payload.exp * 1000 - Date.now();
-    if (remainingMs <= 0) {
-      clearToken();
-      setAuthenticated(false);
-      setAuthNotice("Your session has expired. Please log in again.");
-      return;
-    }
+    const remainingMs = payload ? payload.exp * 1000 - Date.now() : 0;
+    const delayMs = Math.max(0, remainingMs);
 
     const expiryTimer = window.setTimeout(() => {
       clearToken();
@@ -102,7 +92,7 @@ function App() {
       setPage("dashboard");
       setAccountMenuOpen(false);
       setAuthNotice("Your session has expired. Please log in again.");
-    }, remainingMs);
+    }, delayMs);
 
     return () => {
       window.clearTimeout(expiryTimer);
